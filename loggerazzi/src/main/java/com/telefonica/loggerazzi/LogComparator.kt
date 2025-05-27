@@ -2,11 +2,11 @@ package com.telefonica.loggerazzi
 
 import java.lang.StringBuilder
 
-interface LogComparator<LogType> {
-    fun compare(recorded: List<LogType>, golden: List<LogType>): String?
+public interface LogComparator<LogType> {
+    public fun compare(recorded: List<LogType>, golden: List<LogType>): String?
 }
 
-class DefaultLogComparator<LogType> : LogComparator<LogType> {
+public class DefaultLogComparator<LogType> : LogComparator<LogType> {
     override fun compare(recorded: List<LogType>, golden: List<LogType>): String? {
         if (recorded.size != golden.size) {
             return "Different number of lines: recorded=${recorded.size}, golden=${golden.size}"

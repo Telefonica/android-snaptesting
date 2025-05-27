@@ -36,10 +36,18 @@ android {
     }
 }
 
+kotlin {
+    explicitApi()
+}
+
 dependencies {
+    api(libs.differ)
+
     implementation(libs.core.ktx)
     implementation(libs.junit)
     implementation(libs.androidx.test.monitor)
+    implementation(libs.androidx.test.runner)
+    implementation(libs.androidx.ui.test.junit4.android)
 }
 
 apply("${rootProject.projectDir}/mavencentral.gradle")

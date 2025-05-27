@@ -14,6 +14,7 @@ detekt = "1.23.6"
 espresso-core = "3.6.1"
 junit = "4.13.2"
 publish = "2.0.0"
+ui-test-junit4-android = "1.8.2"
 
 [libraries]
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
@@ -24,6 +25,9 @@ espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref =
 espresso-junit = { module = "androidx.test.ext:junit", version.ref = "androidx-junit" }
 junit = { module = "junit:junit", version.ref = "junit" }
 material = { module = "com.google.android.material:material", version.ref = "material" }
+androidx-test-runner = { module = "androidx.test:runner", version = "1.6.2" }
+androidx-ui-test-junit4-android = { group = "androidx.compose.ui", name = "ui-test-junit4-android", version.ref = "ui-test-junit4-android" }
+differ = "com.dropbox.differ:differ:0.3.0"
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

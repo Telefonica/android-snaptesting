@@ -1,11 +1,10 @@
 package com.telefonica.loggerazzi
 
+import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
-
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-
-import org.junit.Rule
 
 /**
  * Instrumented test, which will execute on an Android device.
@@ -17,11 +16,12 @@ class ExampleInstrumentedTest {
 
     private val recorder = FakeTestRecorder()
 
-    @JvmField
-    @Rule
+    @get:Rule
     val loggerazziRule = LoggerazziRule(
         recorder = recorder
     )
+    @get:Rule
+    val screenshotsRule = ScreenshotsRule()
 
     @Test
     fun testSingleLog() {
@@ -41,15 +41,23 @@ class ExampleInstrumentedTest {
     }
 
     @Test
-    @IgnoreLoggerazzi
+    @IgnoreLogs
     fun testIgnoreLoggerazzi() {
         recorder.record("My log")
     }
 
     @Test
-    @IgnoreLoggerazzi
+    @IgnoreLogs
     fun testIgnoreLoggerazziWithoutGoldenFile() {
         recorder.record("My log")
+    }
+
+    @Test
+    @IgnoreLogs
+    fun testLaunchActivity() {
+        ActivityScenario.launch(MainActivity::class.java).onActivity {
+            screenshotsRule.compareScreenshot(it, name = "launch_activity")
+        }
     }
 }
 
