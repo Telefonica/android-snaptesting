@@ -5,6 +5,8 @@ complexity:
     active: false
   LongMethod:
     ignoreAnnotated: 'Composable'
+  NestedBlockDepth:
+    threshold: 5
 
 style:
   NewLineAtEndOfFile:

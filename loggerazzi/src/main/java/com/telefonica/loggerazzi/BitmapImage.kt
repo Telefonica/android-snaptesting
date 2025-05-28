@@ -12,7 +12,7 @@ internal class BitmapImage(private val src: Bitmap) : Image {
     try {
       return Color(src[x, y])
     } catch (e: IllegalArgumentException) {
-      throw IllegalArgumentException("Can't request pixel {x = $x, y = $y} from image {width = $width, height = $height}")
+      throw IllegalArgumentException("Can't request pixel {x = $x, y = $y} from image {width = $width, height = $height}", e)
     }
   }
 }

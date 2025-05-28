@@ -60,8 +60,8 @@ internal class WriteDiffImage {
                 color = 0x3D000000
                 strokeWidth = 0f
             }
-            (0 until differenceMask.height).forEach { y ->
-                (0 until differenceMask.width).forEach { x ->
+            for (y in 0 until differenceMask.height) {
+                for (x in 0 until differenceMask.width) {
                     val paint = if (differenceMask.getValue(x, y) > 0) diffPaint else otherPaint
                     canvas.drawPoint(referenceImage.width + x.toFloat(), y.toFloat(), paint)
                 }
