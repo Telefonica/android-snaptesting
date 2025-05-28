@@ -3,8 +3,6 @@ package com.telefonica.loggerazzi
 import android.app.Activity
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.graphics.Paint
 import android.os.Build
 import android.os.Environment
 import androidx.annotation.RequiresApi
@@ -12,7 +10,6 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onRoot
-import androidx.core.graphics.createBitmap
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.runner.screenshot.Screenshot
 import com.dropbox.differ.ImageComparator
@@ -32,6 +29,7 @@ public class ScreenshotsRule(
     private var className: String = ""
     private var testName: String = ""
     private var isTestIgnored: Boolean = false
+    private val writeDiffImage = WriteDiffImage()
 
     private val context = InstrumentationRegistry.getInstrumentation().context
     private val downloadDir = File(
@@ -83,40 +81,9 @@ public class ScreenshotsRule(
         saveScreenshot(fileName, bitmap)
 
         if (InstrumentationRegistry.getArguments().getString("record") != "true" && !isTestIgnored) {
-            val goldenBitmap = try {
-                context.assets.open("loggerazzi-golden-files/$resourceName").use {
-                    BitmapFactory.decodeStream(it)
-                }
-            } catch (e: FileNotFoundException) {
-                throw IllegalStateException(
-                    "Failed to find golden image named $resourceName. If this is a new test, you may need to record screenshots",
-                    e
-                )
-            }
-
-            if (bitmap.width != goldenBitmap.width || bitmap.height != goldenBitmap.height) {
-                writeDiffImage(fileName, bitmap, goldenBitmap, null)
-                throw AssertionError(
-                    "$name: Test image (w=${bitmap.width}, h=${bitmap.height}) differs in size" +
-                            " from reference image (w=${goldenBitmap.width}, h=${goldenBitmap.height}).\n",
-                )
-            }
-
-            val mask = Mask(bitmap.width, bitmap.height)
-            val result = try {
-                imageComparator.compare(BitmapImage(goldenBitmap), BitmapImage(bitmap), mask)
-            } catch (e: IllegalArgumentException) {
-                writeDiffImage(fileName, bitmap, goldenBitmap, mask)
-                throw AssertionError("Failed to compare images", e)
-            }
-
-            if (!resultValidator(result)) {
-                writeDiffImage(fileName, bitmap, goldenBitmap, mask)
-                throw AssertionError(
-                    "\"$resourceName\" failed to match reference image. ${result.pixelDifferences} pixels differ " +
-                            "(${(result.pixelDifferences / result.pixelCount.toFloat()) * 100} %)"
-                )
-            }
+            val goldenBitmap = getGoldenBitmap(resourceName)
+            compareImagesSize(bitmap, goldenBitmap, fileName, name)
+            compareImages(bitmap, goldenBitmap, fileName, resourceName)
         }
     }
 
@@ -128,63 +95,55 @@ public class ScreenshotsRule(
         }
     }
 
-    /**
-     * Writes the given screenshot to the external reference image directory, returning the
-     * file path of the file that was written.
-     */
-    private fun writeDiffImage(
+    private fun getGoldenBitmap(resourceName: String): Bitmap {
+        val goldenBitmap = try {
+            context.assets.open("loggerazzi-golden-files/$resourceName").use {
+                BitmapFactory.decodeStream(it)
+            }
+        } catch (e: FileNotFoundException) {
+            throw IllegalStateException(
+                "Failed to find golden image named $resourceName. If this is a new test, you may need to record screenshots",
+                e
+            )
+        }
+        return goldenBitmap
+    }
+
+    private fun compareImagesSize(
+        bitmap: Bitmap,
+        goldenBitmap: Bitmap,
         fileName: String,
-        screenshot: Bitmap,
-        referenceImage: Bitmap,
-        mask: Mask?,
+        name: String?
     ) {
-        val diffFile = File(failuresDir, fileName)
-        val diffImage = generateDiffImage(referenceImage, screenshot, mask)
-        diffFile.outputStream().use {
-            diffImage.compress(Bitmap.CompressFormat.PNG, 100, it)
+        if (bitmap.width != goldenBitmap.width || bitmap.height != goldenBitmap.height) {
+            writeDiffImage(failuresDir, fileName, bitmap, goldenBitmap, null)
+            throw AssertionError(
+                "$name: Test image (w=${bitmap.width}, h=${bitmap.height}) differs in size" +
+                        " from reference image (w=${goldenBitmap.width}, h=${goldenBitmap.height}).\n",
+            )
         }
     }
 
-    /**
-     * Generates a `Bitmap` consisting of the reference image, the test image, and
-     * an image that highlights the differences between the two.
-     */
-    private fun generateDiffImage(
-        referenceImage: Bitmap,
-        testImage: Bitmap,
-        differenceMask: Mask?
-    ): Bitmap {
-        // Render the failed screenshots to an output image
-        val maskWidth = differenceMask?.width ?: 0
-        val maskHeight = differenceMask?.height ?: 0
-        val output =
-            createBitmap(
-                width = referenceImage.width + testImage.width + maskWidth,
-                height = maxOf(referenceImage.height, testImage.height, maskHeight)
-            )
-        val canvas = Canvas(output)
-        canvas.drawBitmap(referenceImage, 0f, 0f, null)
-        canvas.drawBitmap(testImage, referenceImage.width.toFloat() + maskWidth, 0f, null)
-
-        // If we have a mask, draw it between the reference image and the test image.
-        if (differenceMask != null) {
-            canvas.drawBitmap(referenceImage, referenceImage.width.toFloat(), 0f, null)
-
-            val diffPaint = Paint().apply {
-                color = 0x3DFF0000
-                strokeWidth = 0f
-            }
-            val otherPaint = Paint().apply {
-                color = 0x3D000000
-                strokeWidth = 0f
-            }
-            (0 until differenceMask.height).forEach { y ->
-                (0 until differenceMask.width).forEach { x ->
-                    val paint = if (differenceMask.getValue(x, y) > 0) diffPaint else otherPaint
-                    canvas.drawPoint(referenceImage.width + x.toFloat(), y.toFloat(), paint)
-                }
-            }
+    private fun compareImages(
+        bitmap: Bitmap,
+        goldenBitmap: Bitmap,
+        fileName: String,
+        resourceName: String
+    ) {
+        val mask = Mask(bitmap.width, bitmap.height)
+        val result = try {
+            imageComparator.compare(BitmapImage(goldenBitmap), BitmapImage(bitmap), mask)
+        } catch (e: IllegalArgumentException) {
+            writeDiffImage(failuresDir, fileName, bitmap, goldenBitmap, mask)
+            throw AssertionError("Failed to compare images", e)
         }
-        return output
+
+        if (!resultValidator(result)) {
+            writeDiffImage(failuresDir, fileName, bitmap, goldenBitmap, mask)
+            throw AssertionError(
+                "\"$resourceName\" failed to match reference image. ${result.pixelDifferences} pixels differ " +
+                        "(${(result.pixelDifferences / result.pixelCount.toFloat()) * 100} %)"
+            )
+        }
     }
 }
