@@ -14,7 +14,7 @@
  * Attributions:
  *     Work based on Roborazzi reports -> https://github.com/takahirom/roborazzi
  */
-package com.telefonica.loggerazzi
+package com.telefonica.androidsnaptesting
 
 import java.io.File
 

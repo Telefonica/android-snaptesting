@@ -1,4 +1,4 @@
-package com.telefonica.loggerazzi
+package com.telefonica.androidsnaptesting
 
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -17,7 +17,7 @@ class ExampleInstrumentedTest {
     private val recorder = FakeTestRecorder()
 
     @get:Rule
-    val loggerazziRule = LoggerazziRule(
+    val logsRule = LogsRule(
         recorder = recorder
     )
     @get:Rule
@@ -42,13 +42,13 @@ class ExampleInstrumentedTest {
 
     @Test
     @IgnoreLogs
-    fun testIgnoreLoggerazzi() {
+    fun testIgnoreLogs() {
         recorder.record("My log")
     }
 
     @Test
     @IgnoreLogs
-    fun testIgnoreLoggerazziWithoutGoldenFile() {
+    fun testIgnoreLogsWithoutGoldenFile() {
         recorder.record("My log")
     }
 

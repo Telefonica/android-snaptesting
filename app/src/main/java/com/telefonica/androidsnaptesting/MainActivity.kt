@@ -1,4 +1,4 @@
-package com.telefonica.loggerazzi
+package com.telefonica.androidsnaptesting
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle

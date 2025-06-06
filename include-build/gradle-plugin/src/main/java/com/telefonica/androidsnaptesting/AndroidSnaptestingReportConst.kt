@@ -14,9 +14,9 @@
  * Attributions:
  *     Work based on Roborazzi reports -> https://github.com/takahirom/roborazzi
  */
-package com.telefonica.loggerazzi
+package com.telefonica.androidsnaptesting
 
-object LoggerazziReportConst {
+object AndroidSnaptestingReportConst {
     const val reportHtml = """
 <!DOCTYPE html>
 <html lang="en">
@@ -24,7 +24,7 @@ object LoggerazziReportConst {
     <meta charset="UTF-8"/>
     <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Loggerazzi report</title>
+    <title>Android Snaptesting report</title>
     <!-- Compiled and minified CSS -->
     <link
             rel="stylesheet"
@@ -73,7 +73,7 @@ object LoggerazziReportConst {
 <body>
 <nav role="navigation" class="light-blue lighten-1">
     <div class="nav-wrapper container">
-        <a href="#" class="brand-logo">Loggerazzi report</a>
+        <a href="#" class="brand-logo">Android Snaptesting report</a>
         <a href="#" data-target="nav-mobile" class="sidenav-trigger"
         ><i class="material-icons menu">menu</i></a
         >
@@ -89,8 +89,8 @@ REPORT_TEMPLATE_BODY
 
 <footer class="page-footer orange">
     <div class="container">
-        <a class="us" href="https://github.com/Telefonica/loggerazzi" target="_blank"
-           rel="noopener noreferrer">Loggerazzi</a>
+        <a class="us" href="https://github.com/Telefonica/android-snaptesting" target="_blank"
+           rel="noopener noreferrer">Android Snaptesting</a>
         <br>
         <br>
     </div>

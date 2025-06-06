@@ -20,13 +20,13 @@ dependencies {
 
 gradlePlugin {
     plugins {
-        create("loggerazzi-plugin") {
-            id = "com.telefonica.loggerazzi-plugin"
-            displayName = "Loggerazzi"
-            description = "Logs snapshot testing for Android Instrumentation tests"
-            implementationClass = "com.telefonica.loggerazzi.LoggerazziPlugin"
-            website = "https://github.com/Telefonica/android-loggerazzi"
-            vcsUrl = "https://github.com/Telefonica/android-loggerazzi"
+        create("androidsnaptesting-plugin") {
+            id = "com.telefonica.androidsnaptesting-plugin"
+            displayName = "Android Snaptesting"
+            description = "Logs and screenshots snapshot testing for Android Instrumentation tests"
+            implementationClass = "com.telefonica.androidsnaptesting.AndroidSnaptestingPlugin"
+            website = "https://github.com/Telefonica/android-snaptesting"
+            vcsUrl = "https://github.com/Telefonica/android-snaptesting"
             tags = listOf("android", "instrumentation", "testing", "logs")
         }
     }

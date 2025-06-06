@@ -1,4 +1,4 @@
-package com.telefonica.loggerazzi
+package com.telefonica.androidsnaptesting
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
