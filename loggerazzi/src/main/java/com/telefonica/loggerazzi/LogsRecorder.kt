@@ -1,6 +1,6 @@
 package com.telefonica.loggerazzi
 
-interface LogsRecorder<LogType> {
-    fun clear()
-    fun getRecordedLogs(): List<LogType>
+public interface LogsRecorder<LogType> {
+    public fun clear()
+    public fun getRecordedLogs(): List<LogType>
 }

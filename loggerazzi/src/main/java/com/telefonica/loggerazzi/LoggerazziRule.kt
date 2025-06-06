@@ -6,7 +6,7 @@ import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import java.io.File
 
-class LoggerazziRule(
+public class LoggerazziRule(
     recorder: LogsRecorder<String>,
     comparator: LogComparator<String> = DefaultLogComparator(),
 ) : GenericLoggerazziRule<String>(
@@ -18,8 +18,8 @@ class LoggerazziRule(
     comparator = comparator,
 )
 
-open class GenericLoggerazziRule<LogType>(
-    val recorder: LogsRecorder<LogType>,
+public open class GenericLoggerazziRule<LogType>(
+    public val recorder: LogsRecorder<LogType>,
     private val stringMapper: StringMapper<LogType>,
     private val comparator: LogComparator<LogType> = DefaultLogComparator(),
 ) : TestWatcher() {
@@ -48,10 +48,10 @@ open class GenericLoggerazziRule<LogType>(
     override fun succeeded(description: Description?) {
         super.succeeded(description)
 
-        val isTestIgnored = description?.getAnnotation(IgnoreLoggerazzi::class.java) != null
+        val isTestIgnored = description?.getAnnotation(IgnoreLogs::class.java) != null
 
         val testName = "${description?.className}_${description?.methodName}"
-        val fileName = "${testName}.${System.nanoTime()}"
+        val fileName = "${testName}.txt.${System.nanoTime()}"
 
         val recordedLogs = recorder.getRecordedLogs()
         val log = recordedLogs.joinToString("\n") { stringMapper.fromLog(it) }

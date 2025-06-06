@@ -147,7 +147,8 @@ class LoggerazziPlugin @Inject constructor(
                         file.delete()
                     }
                 }
-                lastFile?.renameTo(File(this, "$key.txt"))
+
+                lastFile?.renameTo(File(this, key))
             }
     }
 }
