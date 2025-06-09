@@ -3,9 +3,9 @@
     <img src="https://img.shields.io/badge/Support-%3E%3D%20Android%206.0-brightgreen" />
 </p>
 
-# Android Loggerazzi
+# Android Snaptesting
 
-Logs snapshot testing for Android Instrumentation tests.
+Logs and screenshots snapshot testing for Android Instrumentation tests.
 
 ## Introduction
 
@@ -22,14 +22,14 @@ To include the plugin, add it to the plugins block of your project's build.gradl
 ```gradle
 plugins {
     ...
-    id("com.telefonica.loggerazzi-plugin") version $loggerazzi_version apply false
+    id("com.telefonica.androidsnaptesting-plugin") version $android_snaptesting_version apply false
 }
 ```
 Then, include it into your specific application or library build.gradle:
 ```gradle
 plugins {
     ...
-    id "com.telefonica.loggerazzi-plugin"
+    id "com.telefonica.androidsnaptesting-plugin"
 }
 ```
 
@@ -38,7 +38,7 @@ Also, include the rule dependency in your application or library dependencies bl
 ```gradle
 dependencies {
     ...
-    androidTestImplementation "com.telefonica:loggerazzi:$loggerazzi_version"
+    androidTestImplementation "com.telefonica:androidsnaptesting:$android_snaptesting_version"
 }
 ```
 

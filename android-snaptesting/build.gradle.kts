@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.telefonica.loggerazzi"
+    namespace = "com.telefonica.androidsnaptesting"
     compileSdk = libs.versions.compile.sdk.get().toInt()
 
 

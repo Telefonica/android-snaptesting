@@ -9,7 +9,7 @@ plugins {
 }
 
 allprojects {
-    group = "com.telefonica.loggerazzi"
+    group = "com.telefonica.androidsnaptesting"
     version = System.getProperty("LIBRARY_VERSION") ?: "undefined"
 
     apply(plugin = rootProject.libs.plugins.detekt.get().pluginId)

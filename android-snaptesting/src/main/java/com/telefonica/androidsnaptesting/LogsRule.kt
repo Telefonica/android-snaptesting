@@ -1,4 +1,4 @@
-package com.telefonica.loggerazzi
+package com.telefonica.androidsnaptesting
 
 import android.os.Environment
 import androidx.test.platform.app.InstrumentationRegistry
@@ -6,10 +6,10 @@ import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import java.io.File
 
-public class LoggerazziRule(
+public class LogsRule(
     recorder: LogsRecorder<String>,
     comparator: LogComparator<String> = DefaultLogComparator(),
-) : GenericLoggerazziRule<String>(
+) : GenericLogsRule<String>(
     recorder = recorder,
     stringMapper = object : StringMapper<String> {
         override fun fromLog(log: String): String = log
@@ -18,7 +18,7 @@ public class LoggerazziRule(
     comparator = comparator,
 )
 
-public open class GenericLoggerazziRule<LogType>(
+public open class GenericLogsRule<LogType>(
     public val recorder: LogsRecorder<LogType>,
     private val stringMapper: StringMapper<LogType>,
     private val comparator: LogComparator<LogType> = DefaultLogComparator(),
@@ -29,9 +29,9 @@ public open class GenericLoggerazziRule<LogType>(
     private val downloadDir = File(
         Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
     )
-    private val loggerazziDir = File(downloadDir, "loggerazzi-logs/${context.packageName}")
-    private val failuresDir = File(loggerazziDir, "failures")
-    private val recordedDir = File(loggerazziDir, "recorded")
+    private val androidSnaptestingDir = File(downloadDir, "android-snaptesting/${context.packageName}")
+    private val failuresDir = File(androidSnaptestingDir, "failures")
+    private val recordedDir = File(androidSnaptestingDir, "recorded")
 
     override fun starting(description: Description?) {
         super.starting(description)
@@ -62,7 +62,7 @@ public open class GenericLoggerazziRule<LogType>(
         if (InstrumentationRegistry.getArguments().getString("record") != "true" && !isTestIgnored) {
             val goldenFile =
                 InstrumentationRegistry.getInstrumentation().context.assets.open(
-                    "loggerazzi-golden-files/${testName}.txt"
+                    "android-snaptesting-golden-files/${testName}.txt"
                 )
             val goldenStringLogs = String(goldenFile.readBytes()).takeIf { it.isNotEmpty() }?.split("\n") ?: emptyList()
             val result = comparator.compare(recordedLogs, goldenStringLogs.map { stringMapper.toLog(it) })

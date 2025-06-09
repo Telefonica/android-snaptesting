@@ -13,7 +13,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "loggerazzi"
+rootProject.name = "android-snaptesting"
 include(":app")
 includeBuild("include-build")
-include(":loggerazzi")
+include(":android-snaptesting")

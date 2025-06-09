@@ -1,4 +1,4 @@
-package com.telefonica.loggerazzi
+package com.telefonica.androidsnaptesting
 
 import android.app.Activity
 import android.graphics.Bitmap
@@ -35,9 +35,9 @@ public class ScreenshotsRule(
     private val downloadDir = File(
         Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
     )
-    private val loggerazziDir = File(downloadDir, "loggerazzi-logs/${context.packageName}")
-    private val failuresDir = File(loggerazziDir, "failures")
-    private val recordedDir = File(loggerazziDir, "recorded")
+    private val androidSnaptestingDir = File(downloadDir, "android-snaptesting/${context.packageName}")
+    private val failuresDir = File(androidSnaptestingDir, "failures")
+    private val recordedDir = File(androidSnaptestingDir, "recorded")
 
     override fun apply(base: Statement, description: Description): Statement {
         className = description.className
@@ -97,7 +97,7 @@ public class ScreenshotsRule(
 
     private fun getGoldenBitmap(resourceName: String): Bitmap {
         val goldenBitmap = try {
-            context.assets.open("loggerazzi-golden-files/$resourceName").use {
+            context.assets.open("android-snaptesting-golden-files/$resourceName").use {
                 BitmapFactory.decodeStream(it)
             }
         } catch (e: FileNotFoundException) {

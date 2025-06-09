@@ -1,15 +1,15 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin)
-    id("com.telefonica.loggerazzi-plugin")
+    id("com.telefonica.androidsnaptesting-plugin")
 }
 
 android {
-    namespace = "com.telefonica.loggerazzi"
+    namespace = "com.telefonica.androidsnaptesting"
     compileSdk = libs.versions.compile.sdk.get().toInt()
 
     defaultConfig {
-        applicationId = "com.telefonica.loggerazzi"
+        applicationId = "com.telefonica.androidsnaptesting"
         minSdk = libs.versions.min.sdk.get().toInt()
         targetSdk = libs.versions.target.sdk.get().toInt()
         versionCode = 1
@@ -44,5 +44,5 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.espresso.junit)
     androidTestImplementation(libs.espresso.core)
-    androidTestImplementation(project(":loggerazzi"))
+    androidTestImplementation(project(":android-snaptesting"))
 }

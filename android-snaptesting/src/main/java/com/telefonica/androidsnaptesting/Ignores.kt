@@ -1,4 +1,4 @@
-package com.telefonica.loggerazzi
+package com.telefonica.androidsnaptesting
 
 
 @Retention(AnnotationRetention.RUNTIME)

@@ -1,4 +1,4 @@
-package com.telefonica.loggerazzi
+package com.telefonica.androidsnaptesting
 
 public interface StringMapper<LogType> {
     public fun fromLog(log: LogType): String

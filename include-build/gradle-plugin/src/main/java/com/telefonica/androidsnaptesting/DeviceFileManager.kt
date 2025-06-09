@@ -1,4 +1,4 @@
-package com.telefonica.loggerazzi
+package com.telefonica.androidsnaptesting
 
 import com.android.build.gradle.TestedExtension
 import com.android.build.gradle.api.TestVariant
@@ -29,23 +29,23 @@ class DeviceFileManager(
         .firstOrNull { it.name == testTask.variantName }
         ?: throw RuntimeException("TestVariant not found")
 
-    fun pullRecordedLogs(
+    fun pullRecordedSnapshots(
         destinationPath: String,
     ) {
-        pullLogs("recorded", destinationPath)
+        pullSnapshots("recorded", destinationPath)
     }
 
-    fun pullFailuresLogs(
+    fun pullFailuresSnapshots(
         destinationPath: String,
     ) {
-        pullLogs("failures", destinationPath)
+        pullSnapshots("failures", destinationPath)
     }
 
-    fun clearAllLogs() {
+    fun clearAllSnapshots() {
         withConnectedDevices { devices ->
             devices.forEach {
                 val receiver = CollectingOutputReceiver()
-                it.iDevice.executeShellCommand("rm -rf ${getDeviceLoggerazziRootAbsolutePath()}", receiver)
+                it.iDevice.executeShellCommand("rm -rf ${getDeviceAndroidSnaptestingRootAbsolutePath()}", receiver)
                 println(receiver.output)
             }
         }
@@ -60,10 +60,10 @@ class DeviceFileManager(
         return fileEntry
     }
 
-    private fun getDeviceLoggerazziRootAbsolutePath(): String =
-        "${FileListingService.DIRECTORY_SDCARD}/Download/loggerazzi-logs/${testedVariant.applicationId}"
-    private fun getDeviceLoggerazziSubfolderAbsolutePath(subFolder: String): String =
-        "${getDeviceLoggerazziRootAbsolutePath()}/$subFolder"
+    private fun getDeviceAndroidSnaptestingRootAbsolutePath(): String =
+        "${FileListingService.DIRECTORY_SDCARD}/Download/android-snaptesting/${testedVariant.applicationId}"
+    private fun getDeviceAndroidSnaptestingSubfolderAbsolutePath(subFolder: String): String =
+        "${getDeviceAndroidSnaptestingRootAbsolutePath()}/$subFolder"
 
     @Suppress("UnstableApiUsage")
     private fun withConnectedDevices(runnable: (List<ConnectedDevice>) -> Unit) {
@@ -79,11 +79,11 @@ class DeviceFileManager(
         }
     }
 
-    private fun pullLogs(
-        loggerazziSubFolderInDevice: String,
+    private fun pullSnapshots(
+        androidSnaptestingSubFolderInDevice: String,
         destinationPath: String,
     ) {
-        val fileEntry = getDeviceLoggerazziSubfolderAbsolutePath(loggerazziSubFolderInDevice).toFileEntry()
+        val fileEntry = getDeviceAndroidSnaptestingSubfolderAbsolutePath(androidSnaptestingSubFolderInDevice).toFileEntry()
         withConnectedDevices { devices ->
             devices.forEach {
                 pullFolderFiles(
@@ -96,11 +96,11 @@ class DeviceFileManager(
     }
 
     private fun pullFolderFiles(
-        loggerazziDeviceFolder: FileEntry,
+        androidSnaptestingDeviceFolder: FileEntry,
         device: IDevice,
         destinationPath: String,
     ) {
-        device.fileListingService.getChildrenSync(loggerazziDeviceFolder).forEach {
+        device.fileListingService.getChildrenSync(androidSnaptestingDeviceFolder).forEach {
             device.pullFile(it.fullPath, "$destinationPath/${it.name}")
         }
     }

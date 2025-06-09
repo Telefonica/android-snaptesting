@@ -1,4 +1,4 @@
-package com.telefonica.loggerazzi
+package com.telefonica.androidsnaptesting
 
 import com.android.build.gradle.internal.tasks.AndroidVariantTask
 import com.android.build.gradle.internal.tasks.DeviceProviderInstrumentTestTask
@@ -10,7 +10,7 @@ import org.gradle.tooling.events.OperationCompletionListener
 import java.io.File
 import javax.inject.Inject
 
-class LoggerazziPlugin @Inject constructor(
+class AndroidSnaptestingPlugin @Inject constructor(
     private val buildEventListenerRegistry: BuildEventListenerRegistryInternal
 ) : Plugin<Project> {
 
@@ -21,21 +21,21 @@ class LoggerazziPlugin @Inject constructor(
                 .withType(DeviceProviderInstrumentTestTask::class.java)
 
             if (deviceProviderInstrumentTestTasks.isEmpty()) {
-                throw LoggerazziNoDeviceProviderInstrumentTestTasksException()
+                throw AndroidSnaptestingNoDeviceProviderInstrumentTestTasksException()
             }
 
             deviceProviderInstrumentTestTasks
                 .forEach { deviceProviderTask ->
                     val capitalizedVariant = deviceProviderTask.variantName.capitalizeFirstLetter()
-                    val beforeTaskName = "loggerazziBefore$capitalizedVariant"
+                    val beforeTaskName = "androidSnaptestingBefore$capitalizedVariant"
                     project.tasks.register(beforeTaskName, Task::class.java) { task ->
                         task.doFirst {
-                            deviceProviderTask.deviceFileManager().clearAllLogs()
+                            deviceProviderTask.deviceFileManager().clearAllSnapshots()
                         }
                     }
                     deviceProviderTask.dependsOn(beforeTaskName)
 
-                    val afterTaskName = "loggerazziAfter$capitalizedVariant"
+                    val afterTaskName = "androidSnaptestingAfter$capitalizedVariant"
                     project.tasks.register(afterTaskName, Task::class.java) { task ->
                         task.doLast {
                             deviceProviderTask.afterExecution()
@@ -51,26 +51,26 @@ class LoggerazziPlugin @Inject constructor(
     private fun DeviceProviderInstrumentTestTask.afterExecution() {
         val deviceFileManager = deviceFileManager()
 
-        val reportsFolder = reportsDir.get().dir("loggerazzi")
+        val reportsFolder = reportsDir.get().dir("androidSnaptesting")
         val recordedFolderFile = reportsFolder.dir("recorded").asFile.apply {
             mkdirs()
-            deviceFileManager.pullRecordedLogs(absolutePath)
+            deviceFileManager.pullRecordedSnapshots(absolutePath)
             processAndFilterResults()
         }
         val failuresFolderFile = reportsFolder.dir("failures").asFile.apply {
             mkdirs()
-            deviceFileManager.pullFailuresLogs(absolutePath)
+            deviceFileManager.pullFailuresSnapshots(absolutePath)
             processAndFilterResults()
         }
         val goldenForFailuresReportFolderFile = reportsFolder.dir("golden").asFile.apply {
             mkdirs()
         }
-        val goldenFolderFile = File(getAbsoluteGoldenLogsSourcePath())
+        val goldenFolderFile = File(getAbsoluteGoldenSnapshotsSourcePath())
 
         File("${reportsFolder.asFile.absolutePath}/recorded.html").apply {
             createNewFile()
             val recordedFiles = recordedFolderFile.listFiles()?.asList() ?: emptyList()
-            val report = LoggerazziReportConst.reportHtml.replace(
+            val report = AndroidSnaptestingReportConst.reportHtml.replace(
                 oldValue = "REPORT_TEMPLATE_BODY",
                 newValue = getRecordedReport(recordedFiles, reportsFolder.asFile)
             )
@@ -93,14 +93,14 @@ class LoggerazziPlugin @Inject constructor(
                         }
                     )
                 }
-                val report = LoggerazziReportConst.reportHtml.replace(
+                val report = AndroidSnaptestingReportConst.reportHtml.replace(
                     oldValue = "REPORT_TEMPLATE_BODY",
                     newValue = getFailuresReport(failuresEntries, reportsFolder.asFile)
                 )
                 writeText(report)
             }
         } else {
-            File(getAbsoluteGoldenLogsSourcePath()).apply {
+            File(getAbsoluteGoldenSnapshotsSourcePath()).apply {
                 mkdirs()
                 recordedFolderFile.copyRecursively(this, true)
             }
@@ -120,13 +120,13 @@ class LoggerazziPlugin @Inject constructor(
         )
     }
 
-    private fun AndroidVariantTask.getAbsoluteGoldenLogsSourcePath(): String {
+    private fun AndroidVariantTask.getAbsoluteGoldenSnapshotsSourcePath(): String {
         val variantSourceFolder = this
             .variantName
             .replace("AndroidTest", "")
             .capitalizeFirstLetter()
             .let { "androidTest$it" }
-        return "${project.projectDir}/src/$variantSourceFolder/assets/loggerazzi-golden-files"
+        return "${project.projectDir}/src/$variantSourceFolder/assets/android-snaptesting-golden-files"
     }
 
     private fun String.capitalizeFirstLetter(): String {

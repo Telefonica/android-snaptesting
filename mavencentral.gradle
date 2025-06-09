@@ -14,16 +14,16 @@ publishing {
     publications {
         release(MavenPublication) {
             groupId 'com.telefonica'
-            artifactId 'loggerazzi'
+            artifactId 'androidsnaptesting'
             version version
 
-            artifact("$buildDir/outputs/aar/loggerazzi-release.aar")
+            artifact("$buildDir/outputs/aar/android-snaptesting-release.aar")
             artifact androidSourcesJar
 
             pom {
-                name = 'Android Loggerazzi'
-                description = 'Logs snapshot testing for Android Instrumentation tests.'
-                url = 'https://github.com/Telefonica/android-loggerazzi'
+                name = 'Android Snaptesting'
+                description = 'Logs and screenshots snapshot testing for Android Instrumentation tests.'
+                url = 'https://github.com/Telefonica/android-snaptesting'
                 licenses {
                     license {
                         name = 'The Apache License, Version 2.0'
@@ -38,9 +38,9 @@ publishing {
                     }
                 }
                 scm {
-                    connection = 'scm:git:github.com/Telefonica/android-loggerazzi.git'
-                    developerConnection = 'scm:git:ssh://github.com/Telefonica/android-loggerazzi.git'
-                    url = 'https://github.com/Telefonica/android-loggerazzi/tree/main'
+                    connection = 'scm:git:github.com/Telefonica/android-snaptesting.git'
+                    developerConnection = 'scm:git:ssh://github.com/Telefonica/android-snaptesting.git'
+                    url = 'https://github.com/Telefonica/android-snaptesting/tree/main'
                 }
                 withXml {
                     def dependenciesNode = asNode().appendNode('dependencies')
