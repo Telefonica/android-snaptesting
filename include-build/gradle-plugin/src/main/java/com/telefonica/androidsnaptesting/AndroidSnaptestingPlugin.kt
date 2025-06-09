@@ -30,7 +30,7 @@ class AndroidSnaptestingPlugin @Inject constructor(
                     val beforeTaskName = "androidSnaptestingBefore$capitalizedVariant"
                     project.tasks.register(beforeTaskName, Task::class.java) { task ->
                         task.doFirst {
-                            deviceProviderTask.deviceFileManager().clearAllLogs()
+                            deviceProviderTask.deviceFileManager().clearAllSnapshots()
                         }
                     }
                     deviceProviderTask.dependsOn(beforeTaskName)
@@ -54,18 +54,18 @@ class AndroidSnaptestingPlugin @Inject constructor(
         val reportsFolder = reportsDir.get().dir("androidSnaptesting")
         val recordedFolderFile = reportsFolder.dir("recorded").asFile.apply {
             mkdirs()
-            deviceFileManager.pullRecordedLogs(absolutePath)
+            deviceFileManager.pullRecordedSnapshots(absolutePath)
             processAndFilterResults()
         }
         val failuresFolderFile = reportsFolder.dir("failures").asFile.apply {
             mkdirs()
-            deviceFileManager.pullFailuresLogs(absolutePath)
+            deviceFileManager.pullFailuresSnapshots(absolutePath)
             processAndFilterResults()
         }
         val goldenForFailuresReportFolderFile = reportsFolder.dir("golden").asFile.apply {
             mkdirs()
         }
-        val goldenFolderFile = File(getAbsoluteGoldenLogsSourcePath())
+        val goldenFolderFile = File(getAbsoluteGoldenSnapshotsSourcePath())
 
         File("${reportsFolder.asFile.absolutePath}/recorded.html").apply {
             createNewFile()
@@ -100,7 +100,7 @@ class AndroidSnaptestingPlugin @Inject constructor(
                 writeText(report)
             }
         } else {
-            File(getAbsoluteGoldenLogsSourcePath()).apply {
+            File(getAbsoluteGoldenSnapshotsSourcePath()).apply {
                 mkdirs()
                 recordedFolderFile.copyRecursively(this, true)
             }
@@ -120,7 +120,7 @@ class AndroidSnaptestingPlugin @Inject constructor(
         )
     }
 
-    private fun AndroidVariantTask.getAbsoluteGoldenLogsSourcePath(): String {
+    private fun AndroidVariantTask.getAbsoluteGoldenSnapshotsSourcePath(): String {
         val variantSourceFolder = this
             .variantName
             .replace("AndroidTest", "")

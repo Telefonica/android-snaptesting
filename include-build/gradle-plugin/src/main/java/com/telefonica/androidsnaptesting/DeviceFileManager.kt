@@ -29,19 +29,19 @@ class DeviceFileManager(
         .firstOrNull { it.name == testTask.variantName }
         ?: throw RuntimeException("TestVariant not found")
 
-    fun pullRecordedLogs(
+    fun pullRecordedSnapshots(
         destinationPath: String,
     ) {
-        pullLogs("recorded", destinationPath)
+        pullSnapshots("recorded", destinationPath)
     }
 
-    fun pullFailuresLogs(
+    fun pullFailuresSnapshots(
         destinationPath: String,
     ) {
-        pullLogs("failures", destinationPath)
+        pullSnapshots("failures", destinationPath)
     }
 
-    fun clearAllLogs() {
+    fun clearAllSnapshots() {
         withConnectedDevices { devices ->
             devices.forEach {
                 val receiver = CollectingOutputReceiver()
@@ -79,7 +79,7 @@ class DeviceFileManager(
         }
     }
 
-    private fun pullLogs(
+    private fun pullSnapshots(
         androidSnaptestingSubFolderInDevice: String,
         destinationPath: String,
     ) {
