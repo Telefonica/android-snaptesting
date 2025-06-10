@@ -22,28 +22,59 @@ fun getFailuresReport(
     failureEntries: List<FailureEntry>,
     reportsDir: File,
 ): String {
+
+    val failureLogs = failureEntries.filter { it.failure.name.endsWith(".txt") }
+    val failureImages = failureEntries.filter { it.failure.name.endsWith(".png") }
+
     return buildString {
-        append("<h3>Failures Report</h3>")
+        append("<h2>Failures Report</h2>")
         val fileNameClass = "flow-text col s3"
         val fileNameStyle = "word-wrap: break-word; word-break: break-all;"
-        val imgClass = "col s3"
+        val txtClass = "col s3"
+        val imgClass = "col s9"
         val imgAttributes = "style=\"width: 100%; height: 100%; object-fit: cover;\" class=\"modal-trigger\""
+        append("<h3>Logs</h3>")
         append("<table class=\"highlight\" id=\"\">")
         append("<thead>")
         append("<tr class=\"row\">")
         append("<th class=\"$fileNameClass\" style=\"$fileNameStyle\">File Name</th>")
-        append("<th class=\"$imgClass flow-text \">Golden Log</th>")
-        append("<th class=\"$imgClass flow-text \">Failure</th>")
-        append("<th class=\"$imgClass flow-text \">Recorded Log</th>")
+        append("<th class=\"$txtClass flow-text \">Golden Log</th>")
+        append("<th class=\"$txtClass flow-text \">Failure</th>")
+        append("<th class=\"$txtClass flow-text \">Recorded Log</th>")
         append("</tr>")
         append("</thead>")
         append("<tbody>")
-        failureEntries.forEach { entry ->
+        failureLogs.forEach { entry ->
             append("<tr class=\"row\">")
             append("<td class=\"$fileNameClass\" style=\"$fileNameStyle\">${entry.failure.name}</td>")
-            append("<td class=\"$imgClass\"><iframe $imgAttributes src=\"${entry.golden.relativeTo(reportsDir)}\"></iframe></td>")
-            append("<td class=\"$imgClass\"><iframe $imgAttributes src=\"${entry.failure.relativeTo(reportsDir)}\"></iframe></td>")
-            append("<td class=\"$imgClass\"><iframe $imgAttributes src=\"${entry.recorded.relativeTo(reportsDir)}\"></iframe></td>")
+            append("<td class=\"$txtClass\"><iframe $imgAttributes src=\"${entry.golden.relativeTo(reportsDir)}\"></iframe></td>")
+            append("<td class=\"$txtClass\"><iframe $imgAttributes src=\"${entry.failure.relativeTo(reportsDir)}\"></iframe></td>")
+            append("<td class=\"$txtClass\"><iframe $imgAttributes src=\"${entry.recorded.relativeTo(reportsDir)}\"></iframe></td>")
+            append("</tr>")
+        }
+        append("</tbody>")
+        append("</table>")
+        append("<br>")
+
+        append("<h3>Screenshots</h3>")
+        append("<table class=\"highlight\" id=\"\">")
+        append("<thead>")
+        append("<tr class=\"row\">")
+        append("<th class=\"$fileNameClass\" style=\"$fileNameStyle\">File Name</th>")
+        append("<th class=\"$txtClass flow-text \">Golden</th>")
+        append("<th class=\"$txtClass flow-text \">Diff</th>")
+        append("<th class=\"$txtClass flow-text \">Recorded</th>")
+        append("</tr>")
+        append("</thead>")
+        append("<tbody>")
+        failureImages.forEach { entry ->
+            append("<tr class=\"row\">")
+            append("<td class=\"$fileNameClass\" style=\"$fileNameStyle\">${entry.failure.name}</td>")
+            append(
+                "<td class=\"$imgClass\"><a href=\"${entry.failure.relativeTo(reportsDir)}\" target=\"_blank\"><img $imgAttributes src=\"${
+                    entry.failure.relativeTo(reportsDir)
+                }\" /></a></td>"
+            )
             append("</tr>")
         }
         append("</tbody>")
@@ -56,23 +87,33 @@ fun getRecordedReport(
     reportsDir: File,
 ): String {
     return buildString {
-        append("<h3>Recorded Logs Report</h3>")
+        append("<h3>Recorded Report</h3>")
         val fileNameClass = "flow-text col s3"
         val fileNameStyle = "word-wrap: break-word; word-break: break-all;"
-        val imgClass = "col s9"
+        val txtClass = "col s9"
+        val imgClass = "col s3"
         val imgAttributes = "style=\"width: 100%; height: 100%; object-fit: cover;\" class=\"modal-trigger\""
         append("<table class=\"highlight\" id=\"\">")
         append("<thead>")
         append("<tr class=\"row\">")
         append("<th class=\"$fileNameClass\" style=\"$fileNameStyle\">File Name</th>")
-        append("<th class=\"$imgClass flow-text \">Recorded Log</th>")
+        append("<th class=\"$txtClass flow-text \">Recorded</th>")
         append("</tr>")
         append("</thead>")
         append("<tbody>")
         recordedFiles.forEach { recorded ->
             append("<tr class=\"row\">")
-            append("<td class=\"$fileNameClass\" style=\"$fileNameStyle\">${recorded.name}</td>")
-            append("<td class=\"$imgClass\"><iframe $imgAttributes src=\"${recorded.relativeTo(reportsDir)}\"></iframe></td>")
+            if (recorded.name.substringAfterLast(".") == "txt") {
+                append("<td class=\"$fileNameClass\" style=\"$fileNameStyle\">${recorded.name}</td>")
+                append("<td class=\"$txtClass\"><iframe $imgAttributes src=\"${recorded.relativeTo(reportsDir)}\"></iframe></td>")
+            } else {
+                append("<td class=\"$fileNameClass\" style=\"$fileNameStyle\">${recorded.name}</td>")
+                append(
+                    "<td class=\"$imgClass\"><a href=\"${recorded.relativeTo(reportsDir)}\" target=\"_blank\"><img $imgAttributes src=\"${
+                        recorded.relativeTo(reportsDir)
+                    }\" /></a></td>"
+                )
+            }
             append("</tr>")
         }
         append("</tbody>")
