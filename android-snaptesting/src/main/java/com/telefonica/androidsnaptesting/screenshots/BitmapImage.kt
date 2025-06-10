@@ -1,4 +1,4 @@
-package com.telefonica.androidsnaptesting
+package com.telefonica.androidsnaptesting.screenshots
 
 import android.graphics.Bitmap
 import com.dropbox.differ.Color

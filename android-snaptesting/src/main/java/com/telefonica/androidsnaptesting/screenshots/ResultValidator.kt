@@ -1,4 +1,4 @@
-package com.telefonica.androidsnaptesting
+package com.telefonica.androidsnaptesting.screenshots
 
 import com.dropbox.differ.ImageComparator
 import kotlin.math.roundToInt

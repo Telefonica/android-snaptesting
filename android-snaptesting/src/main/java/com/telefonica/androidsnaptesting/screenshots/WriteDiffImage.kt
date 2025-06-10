@@ -1,4 +1,4 @@
-package com.telefonica.androidsnaptesting
+package com.telefonica.androidsnaptesting.screenshots
 
 import android.graphics.Bitmap
 import android.graphics.Canvas

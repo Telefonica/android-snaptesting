@@ -1,10 +1,9 @@
-package com.telefonica.androidsnaptesting
+package com.telefonica.androidsnaptesting.screenshots
 
 import android.app.Activity
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Build
-import android.os.Environment
 import androidx.annotation.RequiresApi
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
@@ -15,6 +14,8 @@ import androidx.test.runner.screenshot.Screenshot
 import com.dropbox.differ.ImageComparator
 import com.dropbox.differ.Mask
 import com.dropbox.differ.SimpleImageComparator
+import com.telefonica.androidsnaptesting.Directories
+import com.telefonica.androidsnaptesting.IgnoreScreenshots
 import org.junit.rules.TestRule
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
@@ -31,24 +32,18 @@ public class ScreenshotsRule(
     private var isTestIgnored: Boolean = false
     private val writeDiffImage = WriteDiffImage()
 
-    private val context = InstrumentationRegistry.getInstrumentation().context
-    private val downloadDir = File(
-        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
-    )
-    private val androidSnaptestingDir = File(downloadDir, "android-snaptesting/${context.packageName}")
-    private val failuresDir = File(androidSnaptestingDir, "failures")
-    private val recordedDir = File(androidSnaptestingDir, "recorded")
+    private val directories = Directories()
 
     override fun apply(base: Statement, description: Description): Statement {
         className = description.className
         testName = description.methodName
         isTestIgnored = description.getAnnotation(IgnoreScreenshots::class.java) != null
 
-        if (!failuresDir.exists()) {
-            failuresDir.mkdirs()
+        if (!directories.failuresDir.exists()) {
+            directories.failuresDir.mkdirs()
         }
-        if (!recordedDir.exists()) {
-            recordedDir.mkdirs()
+        if (!directories.recordedDir.exists()) {
+            directories.recordedDir.mkdirs()
         }
         return base
     }
@@ -88,7 +83,7 @@ public class ScreenshotsRule(
     }
 
     private fun saveScreenshot(fileName: String, bitmap: Bitmap) {
-        val testFile = File(recordedDir, fileName)
+        val testFile = File(directories.recordedDir, fileName)
         testFile.createNewFile()
         testFile.outputStream().use {
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
@@ -97,7 +92,7 @@ public class ScreenshotsRule(
 
     private fun getGoldenBitmap(resourceName: String): Bitmap {
         val goldenBitmap = try {
-            context.assets.open("android-snaptesting-golden-files/$resourceName").use {
+            directories.context.assets.open("${directories.goldenFilesDir}/$resourceName").use {
                 BitmapFactory.decodeStream(it)
             }
         } catch (e: FileNotFoundException) {
@@ -116,7 +111,7 @@ public class ScreenshotsRule(
         name: String?
     ) {
         if (bitmap.width != goldenBitmap.width || bitmap.height != goldenBitmap.height) {
-            writeDiffImage(failuresDir, fileName, bitmap, goldenBitmap, null)
+            writeDiffImage(directories.failuresDir, fileName, bitmap, goldenBitmap, null)
             throw AssertionError(
                 "$name: Test image (w=${bitmap.width}, h=${bitmap.height}) differs in size" +
                         " from reference image (w=${goldenBitmap.width}, h=${goldenBitmap.height}).\n",
@@ -134,12 +129,12 @@ public class ScreenshotsRule(
         val result = try {
             imageComparator.compare(BitmapImage(goldenBitmap), BitmapImage(bitmap), mask)
         } catch (e: IllegalArgumentException) {
-            writeDiffImage(failuresDir, fileName, bitmap, goldenBitmap, mask)
+            writeDiffImage(directories.failuresDir, fileName, bitmap, goldenBitmap, mask)
             throw AssertionError("Failed to compare images", e)
         }
 
         if (!resultValidator(result)) {
-            writeDiffImage(failuresDir, fileName, bitmap, goldenBitmap, mask)
+            writeDiffImage(directories.failuresDir, fileName, bitmap, goldenBitmap, mask)
             throw AssertionError(
                 "\"$resourceName\" failed to match reference image. ${result.pixelDifferences} pixels differ " +
                         "(${(result.pixelDifferences / result.pixelCount.toFloat()) * 100} %)"
