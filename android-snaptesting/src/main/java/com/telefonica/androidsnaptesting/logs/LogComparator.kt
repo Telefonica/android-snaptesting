@@ -1,4 +1,4 @@
-package com.telefonica.androidsnaptesting
+package com.telefonica.androidsnaptesting.logs
 
 import java.lang.StringBuilder
 

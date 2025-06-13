@@ -1,7 +1,8 @@
-package com.telefonica.androidsnaptesting
+package com.telefonica.androidsnaptesting.logs
 
-import android.os.Environment
 import androidx.test.platform.app.InstrumentationRegistry
+import com.telefonica.androidsnaptesting.Directories
+import com.telefonica.androidsnaptesting.IgnoreLogs
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import java.io.File
@@ -24,24 +25,17 @@ public open class GenericLogsRule<LogType>(
     private val comparator: LogComparator<LogType> = DefaultLogComparator(),
 ) : TestWatcher() {
 
-    private val context = InstrumentationRegistry.getInstrumentation().context
-
-    private val downloadDir = File(
-        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
-    )
-    private val androidSnaptestingDir = File(downloadDir, "android-snaptesting/${context.packageName}")
-    private val failuresDir = File(androidSnaptestingDir, "failures")
-    private val recordedDir = File(androidSnaptestingDir, "recorded")
+    private val directories = Directories()
 
     override fun starting(description: Description?) {
         super.starting(description)
 
         recorder.clear()
-        if (!failuresDir.exists()) {
-            failuresDir.mkdirs()
+        if (!directories.failuresDir.exists()) {
+            directories.failuresDir.mkdirs()
         }
-        if (!recordedDir.exists()) {
-            recordedDir.mkdirs()
+        if (!directories.recordedDir.exists()) {
+            directories.recordedDir.mkdirs()
         }
     }
 
@@ -55,19 +49,16 @@ public open class GenericLogsRule<LogType>(
 
         val recordedLogs = recorder.getRecordedLogs()
         val log = recordedLogs.joinToString("\n") { stringMapper.fromLog(it) }
-        val testFile = File(recordedDir, fileName)
+        val testFile = File(directories.recordedDir, fileName)
         testFile.createNewFile()
         testFile.writeText(log)
 
         if (InstrumentationRegistry.getArguments().getString("record") != "true" && !isTestIgnored) {
-            val goldenFile =
-                InstrumentationRegistry.getInstrumentation().context.assets.open(
-                    "android-snaptesting-golden-files/${testName}.txt"
-                )
+            val goldenFile = directories.context.assets.open("${directories.goldenFilesDir}/${testName}.txt")
             val goldenStringLogs = String(goldenFile.readBytes()).takeIf { it.isNotEmpty() }?.split("\n") ?: emptyList()
             val result = comparator.compare(recordedLogs, goldenStringLogs.map { stringMapper.toLog(it) })
             if (result != null) {
-                val compareFile = File(failuresDir, fileName)
+                val compareFile = File(directories.failuresDir, fileName)
                 compareFile.createNewFile()
                 compareFile.writeText(result)
                 throw AssertionError("Logs do not match:\n$result")

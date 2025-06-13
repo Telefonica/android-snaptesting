@@ -1,4 +1,4 @@
-package com.telefonica.androidsnaptesting
+package com.telefonica.androidsnaptesting.logs
 
 public interface LogsRecorder<LogType> {
     public fun clear()
