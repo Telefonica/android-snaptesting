@@ -71,7 +71,6 @@ afterEvaluate {
     tasks.getByName("publishReleasePublicationToSonatypeRepository").dependsOn("assembleRelease")
     tasks.getByName("signReleasePublication").dependsOn("assembleRelease")
     tasks.getByName("publishGradlePluginPublicationToMavenRepository").dependsOn("jar")
-    tasks.getByName("signReleasePublication").dependsOn("assembleRelease")
 }
 
 signing {
