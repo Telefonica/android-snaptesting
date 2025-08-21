@@ -68,7 +68,6 @@ publishing {
 
 afterEvaluate {
     tasks.getByName("publishReleasePublicationToMavenLocal").dependsOn("assembleRelease")
-    tasks.getByName("publishReleasePublicationToSonatypeRepository").dependsOn("assembleRelease")
     tasks.getByName("signReleasePublication").dependsOn("assembleRelease")
 }
 
