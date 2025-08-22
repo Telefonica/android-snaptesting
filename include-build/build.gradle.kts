@@ -15,4 +15,3 @@ allprojects {
     }
 }
 
-apply("${rootProject.projectDir}/../publish_maven_central.gradle")
