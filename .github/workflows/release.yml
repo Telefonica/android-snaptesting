@@ -37,4 +37,5 @@ jobs:
           NEXUS_USER: ${{ secrets.NEXUS_RELEASE_USER }}
           NEXUS_PASS: ${{ secrets.NEXUS_RELEASE_PASSWORD }}
         run: |
-          ./gradlew publishGradlePluginPublicationToMavenRepository -DLIBRARY_VERSION=${{ github.event.release.tag_name }}
+          cd include-build
+          ../gradlew publishGradlePluginPublicationToMavenRepository -DLIBRARY_VERSION=${{ github.event.release.tag_name }}
