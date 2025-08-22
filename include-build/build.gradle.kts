@@ -14,4 +14,3 @@ allprojects {
         buildUponDefaultConfig = true
     }
 }
-
