@@ -14,15 +14,15 @@ publishing {
     publications {
         gradlePlugin(MavenPublication) {
             groupId 'com.telefonica'
-            artifactId 'loggerazzi-gradle-plugin'
+            artifactId 'android-snaptesting-gradle-plugin'
             version version
 
             artifact("$buildDir/libs/gradle-plugin-${version}.jar")
 
             pom {
-                name = 'Android Loggerazzi Gradle Plugin'
+                name = 'Android Snaptesting Gradle Plugin'
                 description = 'Gradle Plugin for logs snapshot testing for Android Instrumentation tests.'
-                url = 'https://github.com/Telefonica/android-loggerazzi'
+                url = 'https://github.com/Telefonica/android-snaptesting'
                 licenses {
                     license {
                         name = 'The Apache License, Version 2.0'
@@ -37,9 +37,9 @@ publishing {
                     }
                 }
                 scm {
-                    connection = 'scm:git:github.com/Telefonica/android-loggerazzi.git'
-                    developerConnection = 'scm:git:ssh://github.com/Telefonica/android-loggerazzi.git'
-                    url = 'https://github.com/Telefonica/android-loggerazzi/tree/main'
+                    connection = 'scm:git:github.com/Telefonica/android-snaptesting.git'
+                    developerConnection = 'scm:git:ssh://github.com/Telefonica/android-snaptesting.git'
+                    url = 'https://github.com/Telefonica/android-snaptesting/tree/main'
                 }
                 withXml {
                     def dependenciesNode = asNode().appendNode('dependencies')
@@ -59,15 +59,15 @@ publishing {
 afterEvaluate {
     tasks.getByName("publishGradlePluginPublicationToMavenLocal").dependsOn("jar")
     tasks.getByName("publishGradlePluginPublicationToMavenRepository").dependsOn("jar")
-    tasks.getByName("signGradlePluginPublication").dependsOn("jar")
-    tasks.getByName("signPluginMavenPublication").dependsOn("jar")
+    //tasks.getByName("signGradlePluginPublication").dependsOn("jar")
+    //tasks.getByName("signPluginMavenPublication").dependsOn("jar")
 }
 
 
-signing {
+/*signing {
     def signingKeyId = findProperty("signingKeyId")
     def signingKey = findProperty("signingKey")
     def signingPassword = findProperty("signingPassword")
     useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
     sign publishing.publications
-}
+}*/s
