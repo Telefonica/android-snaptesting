@@ -31,3 +31,5 @@ gradlePlugin {
         }
     }
 }
+
+apply("${rootProject.projectDir}/mavencentral.gradle")
