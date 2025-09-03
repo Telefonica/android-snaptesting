@@ -51,7 +51,7 @@ public class ScreenshotsRule(
     @RequiresApi(Build.VERSION_CODES.O)
     public fun compareScreenshot(
         rule: ComposeTestRule,
-        name: String?,
+        name: String? = null,
     ) {
         rule.waitForIdle()
         val bitmap = rule.onRoot().captureToImage().asAndroidBitmap()
@@ -60,7 +60,7 @@ public class ScreenshotsRule(
 
     public fun compareScreenshot(
         activity: Activity,
-        name: String?,
+        name: String? = null,
     ) {
         val bitmap = Screenshot.capture(activity).bitmap
         compareScreenshot(bitmap, name)
@@ -69,7 +69,7 @@ public class ScreenshotsRule(
     @Suppress("MemberVisibilityCanBePrivate")
     public fun compareScreenshot(
         bitmap: Bitmap,
-        name: String?
+        name: String? = null,
     ) {
         val resourceName = "${className}_${name ?: testName}.png"
         val fileName = "$resourceName.${System.nanoTime()}"
