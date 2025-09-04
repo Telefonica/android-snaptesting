@@ -6,7 +6,6 @@ import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.Looper
 import android.view.View
-import android.view.View.INVISIBLE
 import android.widget.EditText
 import android.widget.HorizontalScrollView
 import android.widget.ScrollView
@@ -41,9 +40,6 @@ public class ScreenshotsRule(
     private val writeDiffImage = WriteDiffImage()
 
     private val directories = Directories()
-
-    private val ignoredViews: List<Int>
-        get() = emptyList()
 
     override fun apply(base: Statement, description: Description): Statement {
         className = description.className
@@ -160,7 +156,6 @@ public class ScreenshotsRule(
     private fun disableFlakyComponentsAndWaitForIdle(view: View? = null) {
         if (view != null) {
             disableAnimatedComponents(view)
-            hideIgnoredViews(view)
         }
         if (notInAppMainThread()) {
             waitForAnimationsToFinish()
@@ -194,12 +189,6 @@ public class ScreenshotsRule(
         it.isHorizontalScrollBarEnabled = false
         it.isVerticalScrollBarEnabled = false
         it.overScrollMode = View.OVER_SCROLL_NEVER
-    }
-
-    private fun hideIgnoredViews(view: View) = runOnUi {
-        view.filterChildrenViews { children -> children.id in ignoredViews }.forEach { viewToIgnore ->
-            viewToIgnore.visibility = INVISIBLE
-        }
     }
 
     public fun waitForAnimationsToFinish() {
