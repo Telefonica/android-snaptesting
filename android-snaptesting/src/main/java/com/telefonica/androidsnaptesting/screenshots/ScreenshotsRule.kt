@@ -74,14 +74,13 @@ public class ScreenshotsRule(
         disableFlakyComponentsAndWaitForIdle(view)
 
         val bitmap = Screenshot.capture(activity).bitmap
-        compareScreenshot(bitmap, name, view)
+        compareScreenshot(bitmap, name)
     }
 
     @Suppress("MemberVisibilityCanBePrivate")
     public fun compareScreenshot(
         bitmap: Bitmap,
         name: String? = null,
-        view: View? = null,
     ) {
         val resourceName = "${className}_${name ?: testName}.png"
         val fileName = "$resourceName.${System.nanoTime()}"
