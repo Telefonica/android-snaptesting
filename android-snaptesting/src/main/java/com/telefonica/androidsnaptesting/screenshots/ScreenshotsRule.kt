@@ -71,6 +71,8 @@ public class ScreenshotsRule(
     ) {
         val view = activity.findViewById<View>(android.R.id.content)
 
+        disableFlakyComponentsAndWaitForIdle(view)
+
         val bitmap = Screenshot.capture(activity).bitmap
         compareScreenshot(bitmap, name, view)
     }
@@ -81,7 +83,6 @@ public class ScreenshotsRule(
         name: String? = null,
         view: View? = null,
     ) {
-        disableFlakyComponentsAndWaitForIdle(view)
         val resourceName = "${className}_${name ?: testName}.png"
         val fileName = "$resourceName.${System.nanoTime()}"
         saveScreenshot(fileName, bitmap)
