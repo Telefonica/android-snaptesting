@@ -48,6 +48,7 @@ dependencies {
     implementation(libs.androidx.test.monitor)
     implementation(libs.androidx.test.runner)
     implementation(libs.androidx.ui.test.junit4.android)
+    implementation(libs.espresso.core)
 }
 
 apply("${rootProject.projectDir}/mavencentral.gradle")
