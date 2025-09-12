@@ -3,21 +3,30 @@
     <img src="https://img.shields.io/badge/Support-%3E%3D%20Android%206.0-brightgreen" />
 </p>
 
+
 # Android Snaptesting
 
-Logs and screenshots snapshot testing for Android Instrumentation tests.
+Snapshot testing for Android Instrumentation tests: **Screenshots** and **Logs**.
+
+
+## Features
+
+- 📸 **Screenshot Testing**: Automatically compare UI screenshots to baselines to catch visual regressions.
+- 📝 **Log Snapshot Testing**: Compare analytics or application logs to baselines to ensure correct events and order.
 
 ## Introduction
 
-Similarly to screenshot testing, which is an easy and maintainable approach to ensure your application UI does not get broken, Loggerazzi brings the same "snapshoting" idea, but for your analytics or any other application logs.
+Android Snaptesting provides two powerful snapshot testing tools:
+
+- **Screenshot Testing**: Ensures your UI remains visually consistent by comparing screenshots taken during tests to previously approved baselines.
+- **Log Testing (Loggerazzi)**: Applies the snapshot testing approach to your analytics or application logs, verifying that the right events are logged in the correct order.
+
 
 ## Usage
 
-You just need to include the Loggerazzi plugin in your project, and the rule in your test class (configuring it properly).
+### 1. Setup
 
-In order to universally include all your existing application tests, rule can be added to your tests base class.
-
-To include the plugin, add it to the plugins block of your project's build.gradle:
+Add the plugin to your project's `build.gradle`:
 
 ```gradle
 plugins {
@@ -25,7 +34,9 @@ plugins {
     id("com.telefonica.androidsnaptesting-plugin") version $android_snaptesting_version apply false
 }
 ```
-Then, include it into your specific application or library build.gradle:
+
+Then, apply it in your application or library module:
+
 ```gradle
 plugins {
     ...
@@ -33,7 +44,7 @@ plugins {
 }
 ```
 
-Also, include the rule dependency in your application or library dependencies block:
+Add the dependency for instrumentation tests:
 
 ```gradle
 dependencies {
@@ -42,44 +53,80 @@ dependencies {
 }
 ```
 
-Finally, add Loggerazzi rule to your test class (or base instrumentation tests class), where a logs recorded must be provided (Check configuration section):
+### 2. Screenshot Testing
+
+Add the screenshot rule to your test class (or base test class):
 
 ```kotlin
+import com.telefonica.androidsnaptesting.screenshot.ScreenshotRule
+
+open class BaseScreenshotTest {
+    @get:Rule
+    val screenshotRule = ScreenshotRule()
+}
+
+// In your test:
+@Test
+fun testMyScreen() {
+    // ... launch your UI ...
+    screenshotRule.snap("MyScreen_baseline")
+}
+```
+
+This will compare the current screenshot to the baseline. If no baseline exists or you want to update it, see the Recording mode below.
+
+### 3. Log Testing (Loggerazzi)
+
+Add the Loggerazzi rule to your test class (or base instrumentation test class), providing a logs recorder (see Configuration):
+
+```kotlin
+import com.telefonica.loggerazzi.LoggerazziRule
+
 open class BaseInstrumentationTest {
     @get:Rule
     val loggerazziRule: LoggerazziRule = LoggerazziRule(
         recorder = fakeAnalyticsTracker
     )
 }
+
+// In your test:
+@Test
+fun testMyEventLogging() {
+    // ... trigger events ...
+    // Loggerazzi will automatically verify logs at the end of the test
+}
 ```
 
-For more details, check included [application example](app).
+For more details, check the included [application example](app).
+
 
 ## Execution
 
 ### Verification mode
 
-Regular `connectedXXXXAndroidTest` target invocation is enough for verifications against previously generated logs baselines. Android Studio executions should also work seamlessly.
+Run your instrumentation tests as usual to verify screenshots and logs against their baselines:
 
 ```bash
 ./gradlew :app:connectedDebugAndroidTest
 ```
 
-In case of any failures due logs verifications, regular junit reports include failed tests and comparation failure reason.
+If there are any failures (either screenshot or log mismatches), JUnit reports will include details, and specific HTML reports are generated:
 
-Additionally, an specific Loggerazzi report is generated at --> `build/reports/androidTests/connected/debug/loggerazzi/failures.html`
+- **Screenshot failures:** `build/reports/androidTests/connected/debug/screenshot/failures.html`
+- **Loggerazzi (log) failures:** `build/reports/androidTests/connected/debug/loggerazzi/failures.html`
 
 ### Recording mode
 
-When the logs baseline needs to be updated, it's enough to include `-Pandroid.testInstrumentationRunnerArguments.record=true`.
+To update baselines (screenshots or logs), add the record argument:
 
 ```bash
 ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.record=true
 ```
 
-This execution won't perform any logs verification, instead, it will execute tests to generate new logs, placing them in the corresponding tests baseline directory.
+This will generate new baselines for both screenshots and logs. Reports are generated at:
 
-A loggerazzi report with all recorded logs is generated at --> `build/reports/androidTests/connected/debug/loggerazzi/recorded.html`
+- **Screenshots:** `build/reports/androidTests/connected/debug/screenshot/recorded.html`
+- **Logs:** `build/reports/androidTests/connected/debug/loggerazzi/recorded.html`
 
 ## Execution from external runners
 
@@ -97,45 +144,60 @@ project.afterEvaluate {
 }
 ```
 
+
 ## Configuration
 
-### Logs recorder
+### Screenshot Testing
 
-Loggerazzi rule must be configured with a [LogsRecorder](loggerazzi/src/main/java/com/telefonica/loggerazzi/LogsRecorder.kt) implementation which will be used by Loggerazzi to obtain logs recorded at the end of the test. This should be usually implemented as the replacement of the original application tracker in tests.
+The `ScreenshotRule` works out of the box, but you can customize:
+
+- **Baseline directory**
+- **Image comparison tolerance**
+- **File naming**
+
+Refer to the API docs or source for advanced configuration options.
+
+### Logs recorder (Loggerazzi)
+
+Loggerazzi rule must be configured with a [LogsRecorder](loggerazzi/src/main/java/com/telefonica/loggerazzi/LogsRecorder.kt) implementation, usually as a replacement for your analytics tracker in tests.
 
 Example:
 
 ```kotlin
 class FakeAnalyticsTracker : AnalyticsTracker, LogsRecorder<String> {
-
     private val logs = mutableListOf<String>()
-
-    override fun clear() {
-        logs.clear()
-    }
-
-    override fun getRecordedLogs(): List<String> =
-        logs.mapIndexed { index, s ->
-            "$index: $s"
-        }
-
+    override fun clear() { logs.clear() }
+    override fun getRecordedLogs(): List<String> = logs.mapIndexed { index, s -> "$index: $s" }
     override fun init() {}
-
-    override fun trackScreenView(screen: AnalyticsScreen) {
-        logs.add("trackScreenView: $screen")
-    }
-
-    override fun trackEvent(event: Event.GenericEvent) {
-        logs.add("trackEvent: $event")
-    }
+    override fun trackScreenView(screen: AnalyticsScreen) { logs.add("trackScreenView: $screen") }
+    override fun trackEvent(event: Event.GenericEvent) { logs.add("trackEvent: $event") }
 }
 ```
 
-### Logs comparator
+#### Logs comparator
 
-By default, Loggerazzi rule compares recorded logs by ensuring these are equal and in same order than the baseline logs.
+By default, Loggerazzi compares logs for exact match and order. For custom comparison (e.g., ignore order or certain logs), implement a [LogComparator](loggerazzi/src/main/java/com/telefonica/loggerazzi/LogComparator.kt) and provide it to the rule.
 
-In case a different comparation mechanism is needed (such as ignoring the order of the events, or ignoring certain logs), you can implement an specific [LogComparator](loggerazzi/src/main/java/com/telefonica/loggerazzi/LogComparator.kt), which can be provided to the LoggerazziRule on its creation.
+#### Ignore a test
+To ignore a test from Loggerazzi verification, use the `@IgnoreLoggerazzi` annotation.
 
-### Ignore a test
-If you want to ignore a test from Loggerazzi verification, you can use the `@IgnoreLoggerazzi` annotation in your test.
+## Combining Screenshot and Log Testing
+
+You can use both rules in the same test class to verify both UI and logs in a single test run:
+
+```kotlin
+import com.telefonica.androidsnaptesting.screenshot.ScreenshotRule
+import com.telefonica.loggerazzi.LoggerazziRule
+
+open class BaseUiAndLogTest {
+    @get:Rule val screenshotRule = ScreenshotRule()
+    @get:Rule val loggerazziRule = LoggerazziRule(recorder = fakeAnalyticsTracker)
+}
+
+@Test
+fun testScreenAndLogs() {
+    // ... launch UI and trigger events ...
+    screenshotRule.snap("MyScreen_baseline")
+    // Loggerazzi will verify logs automatically
+}
+```
