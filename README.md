@@ -11,8 +11,8 @@ Logs and screenshots snapshot testing for Android Instrumentation tests.
 
 Android Snaptesting provides two powerful snapshot testing approaches for Android:
 
-1. **Screenshot Testing**: Captures and compares UI snapshots to ensure your application's visual appearance doesn't break unexpectedly.
-2. **Logs Testing (Loggerazzi)**: Captures and compares analytics events or any application logs to ensure your tracking implementation remains consistent.
+1. **📸 Screenshot Testing**: Captures and compares UI snapshots to ensure your application's visual appearance doesn't break unexpectedly.
+2. **📝 Logs Testing**: Captures and compares analytics events or any application logs to ensure your tracking implementation remains consistent.
 
 Both approaches use the same "snapshoting" concept - record a baseline once, then verify against it in future test runs to catch regressions.
 
@@ -51,12 +51,12 @@ dependencies {
 
 ### Screenshot Testing
 
-Add the ScreenshotRule to your test class:
+Add the `ScreenshotsRule` to your test class:
 
 ```kotlin
 open class BaseInstrumentationTest {
     @get:Rule
-    val screenshotRule: ScreenshotRule = ScreenshotRule()
+    val screenshotsRule: ScreenshotsRule = ScreenshotsRule()
 }
 ```
 
@@ -65,19 +65,19 @@ Then use it in your tests:
 ```kotlin
 @Test
 fun verifyScreenAppearance() {
-    // Navigate to screen or setup view
-    screenshotRule.assertScreenshot(view, "screen_name")
+    // Navigate to screen or setup activity
+    screenshotsRule.compareScreenshot(activity, "screen_name")
 }
 ```
 
-### Logs Testing (Loggerazzi)
+### Logs Testing
 
-Add Loggerazzi rule to your test class (or base instrumentation tests class), where a logs recorder must be provided (Check configuration section):
+Add the `LogsRule` to your test class (or base instrumentation tests class), where a logs recorder must be provided (check configuration section):
 
 ```kotlin
 open class BaseInstrumentationTest {
     @get:Rule
-    val loggerazziRule: LoggerazziRule = LoggerazziRule(
+    val logsRule: LogsRule = LogsRule(
         recorder = fakeAnalyticsTracker
     )
 }
@@ -95,13 +95,9 @@ Regular `connectedXXXXAndroidTest` target invocation is enough for verifications
 ./gradlew :app:connectedDebugAndroidTest
 ```
 
-In case of any failures:
-- For logs verifications, regular junit reports include failed tests and comparison failure reason.
-- For screenshot verifications, a report with visual differences is generated.
+In case of any failures due screenshots or logs verifications, regular jUnit reports include failed tests and comparation failure reason.
 
-Additionally:
-- An specific Loggerazzi report is generated at --> `build/reports/androidTests/connected/debug/loggerazzi/failures.html`
-- A screenshot comparison report is generated at --> `build/reports/androidTests/connected/debug/screenshots/failures.html`
+Additionally, an specific report is generated at --> `build/reports/androidTests/connected/debug/androidSnaptesting/failures.html`
 
 ### Recording mode
 
@@ -113,23 +109,20 @@ When the baselines need to be updated, it's enough to include `-Pandroid.testIns
 
 This execution won't perform any verification, instead, it will execute tests to generate new baselines, placing them in the corresponding tests baseline directory.
 
-Reports with all recorded items are generated at:
-- Logs: `build/reports/androidTests/connected/debug/loggerazzi/recorded.html`
-- Screenshots: `build/reports/androidTests/connected/debug/screenshots/recorded.html`
+Reports with all recorded items are generated at --> `build/reports/androidTests/connected/debug/androidSnaptesting/recorded.html`
 
 ## Execution from external runners
 
-In situations where the regular `connectedXXXXAndroidTest` target is not used because execution is performed by a different external test runner (such as composer or marathon), two sets of gradle tasks are provided which should be executed manually before and after external test runner execution:
- - `loggerazziBefore[VariantName]AndroidTest` and `loggerazziAfter[VariantName]AndroidTest`
- - `screenshotBefore[VariantName]AndroidTest` and `screenshotAfter[VariantName]AndroidTest`
+In situations where the regular `connectedXXXXAndroidTest` target is not used because execution is performed by a different external test runner (such as Composer or Marathon), two sets of gradle tasks are provided which should be executed manually before and after external test runner execution:
+ - `androidSnaptestingBefore[VariantName]AndroidTest` and `androidSnaptestingAfter[VariantName]AndroidTest`
 
 In case test execution is triggered from any gradle task, here's an example on how to configure dependencies with these tasks:
 
 ```gradle
 project.afterEvaluate {
     project.tasks.findByName("externalTestRunner[VariantName]Execution")
-        .dependsOn("loggerazziBefore[VariantName]AndroidTest", "screenshotBefore[VariantName]AndroidTest")
-        .finalizedBy("loggerazziAfter[VariantName]AndroidTest", "screenshotAfter[VariantName]AndroidTest")
+        .dependsOn("androidSnaptestingBefore[VariantName]AndroidTest")
+        .finalizedBy("androidSnaptestingAfter[VariantName]AndroidTest")
 }
 ```
 
@@ -137,16 +130,60 @@ project.afterEvaluate {
 
 ### Screenshot Configuration
 
-The ScreenshotRule can be configured with several options:
+The `ScreenshotsRule` can be configured with several options:
+
+- `ImageComparator`: by default is using a `SimpleImageComparator` that compares the pixels but you can implement a different one. You can configure the `maxDistance` in `SimpleImageComparator`.
+- `ResultValidator`, there are two implementations available althoug you can provice a different one: 
+  - `CountValidator`: accepts or rejects image comparison results based on the absolute number of pixel differences. It's used by default.
+  - `ThresholdValidator`: accepts or rejects image comparison results based a percentage of pixel differences rather than an absolute count.
 
 ```kotlin
-val screenshotRule = ScreenshotRule(
-    tolerance = 0.01, // 1% difference allowed
-    comparator = CustomScreenshotComparator(), // Custom comparison logic
-    screenshotDirectory = "custom_directory" // Custom directory for baselines
+val screenshotRule = ScreenshotsRule(
+    imageComparator = SimpleImageComparator(maxDistance = 0.004f),
+    resultValidator = ThresholdValidator(0.9),
 )
 ```
 
-### Logs Recorder
+### Logs recorder
 
-Loggerazzi rule must be configured with a [LogsRecorder](loggerazi
+`LogsRule` must be configured with a [LogsRecorder](android-snaptesting/src/main/java/com/telefonica/androidsnaptesting/logs/LogsRecorder.kt) implementation which will be used by LogsRule to obtain logs recorded at the end of the test. This should be usually implemented as the replacement of the original application tracker in tests.
+
+Example:
+
+```kotlin
+class FakeAnalyticsTracker : AnalyticsTracker, LogsRecorder<String> {
+
+    private val logs = mutableListOf<String>()
+
+    override fun clear() {
+        logs.clear()
+    }
+
+    override fun getRecordedLogs(): List<String> =
+        logs.mapIndexed { index, s ->
+            "$index: $s"
+        }
+
+    override fun init() {}
+
+    override fun trackScreenView(screen: AnalyticsScreen) {
+        logs.add("trackScreenView: $screen")
+    }
+
+    override fun trackEvent(event: Event.GenericEvent) {
+        logs.add("trackEvent: $event")
+    }
+}
+```
+
+### Logs comparator
+
+By default, `LogsRule` compares recorded logs by ensuring these are equal and in same order than the baseline logs.
+
+In case a different comparation mechanism is needed (such as ignoring the order of the events, or ignoring certain logs), you can implement an specific [LogComparator](android-snaptesting/src/main/java/com/telefonica/androidsnaptesting/logs/LogComparator.kt), which can be provided to the `LogsRule` on its creation.
+
+## Ignore a test
+If you want to ignore a test from logs or screenshots verification, you can use these annotations in your tests:
+
+- Ignore logs verification -> `@IgnoreLogs`
+- Ignore screenshots verification -> `@IgnoreScreenshots`
