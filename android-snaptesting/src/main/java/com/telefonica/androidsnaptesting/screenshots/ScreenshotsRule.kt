@@ -15,6 +15,9 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.espresso.Espresso
+import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.action.ViewActions.closeSoftKeyboard
+import androidx.test.espresso.matcher.ViewMatchers.isRoot
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import androidx.test.runner.screenshot.Screenshot
@@ -68,9 +71,13 @@ public class ScreenshotsRule(
     public fun compareScreenshot(
         activity: Activity,
         name: String? = null,
+        closeKeyboardFirst: Boolean = false,
     ) {
         val view = activity.findViewById<View>(android.R.id.content)
 
+        if (closeKeyboardFirst) {
+            onView(isRoot()).perform(closeSoftKeyboard())
+        }
         disableFlakyComponentsAndWaitForIdle(view)
 
         val bitmap = Screenshot.capture(activity).bitmap
