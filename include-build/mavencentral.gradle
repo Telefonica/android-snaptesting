@@ -1,12 +1,3 @@
-task androidSourcesJar(type: Jar) {
-    archiveClassifier.set('sources')
-    from android.sourceSets.main.java.srcDirs
-}
-
-artifacts {
-    archives androidSourcesJar
-}
-
 apply plugin: 'maven-publish'
 apply plugin: 'signing'
 
@@ -21,17 +12,16 @@ publishing {
         }
     }
     publications {
-        release(MavenPublication) {
+        gradlePlugin(MavenPublication) {
             groupId 'com.telefonica'
-            artifactId 'androidsnaptesting'
+            artifactId 'android-snaptesting-gradle-plugin'
             version version
 
-            artifact("$buildDir/outputs/aar/android-snaptesting-release.aar")
-            artifact androidSourcesJar
+            artifact("$buildDir/libs/gradle-plugin-${version}.jar")
 
             pom {
-                name = 'Android Snaptesting'
-                description = 'Logs and screenshots snapshot testing for Android Instrumentation tests.'
+                name = 'Android Snaptesting Gradle Plugin'
+                description = 'Gradle Plugin for logs snapshot testing for Android Instrumentation tests.'
                 url = 'https://github.com/Telefonica/android-snaptesting'
                 licenses {
                     license {
@@ -54,7 +44,7 @@ publishing {
                 withXml {
                     def dependenciesNode = asNode().appendNode('dependencies')
 
-                    project.configurations.getByName("implementation").allDependencies.each {
+                    project.configurations.getByName("implementation").dependencies.each {
                         def dependencyNode = dependenciesNode.appendNode('dependency')
                         dependencyNode.appendNode('groupId', it.group)
                         dependencyNode.appendNode('artifactId', it.name)
@@ -67,14 +57,6 @@ publishing {
 }
 
 afterEvaluate {
-    tasks.getByName("publishReleasePublicationToMavenLocal").dependsOn("assembleRelease")
-    tasks.getByName("signReleasePublication").dependsOn("assembleRelease")
-}
-
-signing {
-    def signingKeyId = findProperty("signingKeyId")
-    def signingKey = findProperty("signingKey")
-    def signingPassword = findProperty("signingPassword")
-    useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
-    sign publishing.publications
+    tasks.getByName("publishGradlePluginPublicationToMavenLocal").dependsOn("jar")
+    tasks.getByName("publishGradlePluginPublicationToMavenRepository").dependsOn("jar")
 }

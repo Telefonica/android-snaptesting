@@ -4,12 +4,19 @@ import android.app.Activity
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Build
+import android.os.Looper
+import android.view.View
+import android.widget.EditText
+import android.widget.HorizontalScrollView
+import android.widget.ScrollView
 import androidx.annotation.RequiresApi
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onRoot
+import androidx.test.espresso.Espresso
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import androidx.test.runner.screenshot.Screenshot
 import com.dropbox.differ.ImageComparator
 import com.dropbox.differ.Mask
@@ -51,7 +58,7 @@ public class ScreenshotsRule(
     @RequiresApi(Build.VERSION_CODES.O)
     public fun compareScreenshot(
         rule: ComposeTestRule,
-        name: String?,
+        name: String? = null,
     ) {
         rule.waitForIdle()
         val bitmap = rule.onRoot().captureToImage().asAndroidBitmap()
@@ -60,8 +67,12 @@ public class ScreenshotsRule(
 
     public fun compareScreenshot(
         activity: Activity,
-        name: String?,
+        name: String? = null,
     ) {
+        val view = activity.findViewById<View>(android.R.id.content)
+
+        disableFlakyComponentsAndWaitForIdle(view)
+
         val bitmap = Screenshot.capture(activity).bitmap
         compareScreenshot(bitmap, name)
     }
@@ -69,7 +80,7 @@ public class ScreenshotsRule(
     @Suppress("MemberVisibilityCanBePrivate")
     public fun compareScreenshot(
         bitmap: Bitmap,
-        name: String?
+        name: String? = null,
     ) {
         val resourceName = "${className}_${name ?: testName}.png"
         val fileName = "$resourceName.${System.nanoTime()}"
@@ -141,4 +152,58 @@ public class ScreenshotsRule(
             )
         }
     }
+
+    private fun disableFlakyComponentsAndWaitForIdle(view: View? = null) {
+        if (view != null) {
+            disableAnimatedComponents(view)
+        }
+        if (notInAppMainThread()) {
+            waitForAnimationsToFinish()
+        }
+    }
+
+    private fun disableAnimatedComponents(view: View) {
+        runOnUi {
+            hideEditTextCursors(view)
+            hideScrollViewBars(view)
+        }
+    }
+
+    private fun hideEditTextCursors(view: View) {
+        view.childrenViews<EditText>().forEach {
+            it.isCursorVisible = false
+        }
+    }
+
+    private fun hideScrollViewBars(view: View) {
+        view.childrenViews<ScrollView>().forEach {
+            hideViewBars(it)
+        }
+
+        view.childrenViews<HorizontalScrollView>().forEach {
+            hideViewBars(it)
+        }
+    }
+
+    private fun hideViewBars(it: View) {
+        it.isHorizontalScrollBarEnabled = false
+        it.isVerticalScrollBarEnabled = false
+        it.overScrollMode = View.OVER_SCROLL_NEVER
+    }
+
+    public fun waitForAnimationsToFinish() {
+        getInstrumentation().waitForIdleSync()
+        Espresso.onIdle()
+    }
+
+    public fun runOnUi(block: () -> Unit) {
+        if (notInAppMainThread()) {
+            getInstrumentation().runOnMainSync { block() }
+        } else {
+            block()
+        }
+    }
+
+    private fun notInAppMainThread() = Looper.myLooper() != Looper.getMainLooper()
+
 }
