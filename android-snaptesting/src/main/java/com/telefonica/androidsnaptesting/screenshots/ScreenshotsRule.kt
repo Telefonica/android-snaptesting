@@ -61,6 +61,7 @@ public class ScreenshotsRule(
         rule: ComposeTestRule,
         name: String? = null,
     ) {
+        disableFlakyComponentsAndWaitForIdle()
         rule.waitForIdle()
         val bitmap = rule.onRoot().captureToImage().asAndroidBitmap()
         compareScreenshot(bitmap, name)
@@ -93,6 +94,7 @@ public class ScreenshotsRule(
         bitmap: Bitmap,
         name: String? = null,
     ) {
+        disableFlakyComponentsAndWaitForIdle()
         val resourceName = "${className}_${name ?: testName}.png"
         val fileName = "$resourceName.${System.nanoTime()}"
         saveScreenshot(fileName, bitmap)
