@@ -12,13 +12,6 @@ jobs:
     runs-on: [ self-hosted-org, linux ]
     container:
       image: docker://docker.tuenti.io/android/novum_android:13
-      env:
-        TMPDIR: /mnt/ramdisk/tmp
-        ANDROID_AVD_HOME: /mnt/ramdisk/avd
-        GRADLE_USER_HOME: /mnt/ramdisk/gradle/${{ github.event.repository.name }}
-      options: --device=/dev/kvm
-      volumes:
-        - /dev/shm:/mnt/ramdisk
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
