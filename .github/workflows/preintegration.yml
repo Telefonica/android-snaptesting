@@ -2,9 +2,14 @@ name: "Preintegration Checks"
 on:
   pull_request:
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   tests:
-    runs-on: ubuntu-latest
+    runs-on: [ self-hosted-org, linux ]
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
