@@ -94,7 +94,6 @@ public class ScreenshotsRule(
         bitmap: Bitmap,
         name: String? = null,
     ) {
-        disableFlakyComponentsAndWaitForIdle()
         val resourceName = "${className}_${name ?: testName}.png"
         val fileName = "$resourceName.${System.nanoTime()}"
         saveScreenshot(fileName, bitmap)
