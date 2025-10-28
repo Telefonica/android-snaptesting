@@ -11,6 +11,7 @@ import android.widget.HorizontalScrollView
 import android.widget.ScrollView
 import androidx.annotation.RequiresApi
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onRoot
@@ -60,8 +61,19 @@ public class ScreenshotsRule(
         rule: ComposeTestRule,
         name: String? = null,
     ) {
+        disableFlakyComponentsAndWaitForIdle()
         rule.waitForIdle()
         val bitmap = rule.onRoot().captureToImage().asAndroidBitmap()
+        compareScreenshot(bitmap, name)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    public fun compareScreenshot(
+        node: SemanticsNodeInteraction,
+        name: String? = null
+    ) {
+        disableFlakyComponentsAndWaitForIdle()
+        val bitmap = node.captureToImage().asAndroidBitmap()
         compareScreenshot(bitmap, name)
     }
 
