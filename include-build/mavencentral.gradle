@@ -8,7 +8,9 @@ publishing {
                 username System.env.NEXUS_USER
                 password System.env.NEXUS_PASS
             }
-            url "https://nexusng.tuenti.io/repository/maven-release-private/"
+            def releasesRepoUrl = "https://nexusng.tuenti.io/repository/maven-release-private/"
+            def snapshotsRepoUrl = "https://nexusng.tuenti.io/repository/maven-snapshot-private/"
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
         }
     }
     publications {
