@@ -24,7 +24,7 @@ jobs:
           NEXUS_USER: ${{ secrets.NEXUS_RELEASE_USER }}
           NEXUS_PASS: ${{ secrets.NEXUS_RELEASE_PASSWORD }}
         run: |
-          ./gradlew publishReleasePublicationToSnapshotsRepository -DLIBRARY_VERSION=${{ github.event.inputs.snapshot-version }}-SNAPSHOT
+          ./gradlew publishReleasePublicationToMavenRepository -DLIBRARY_VERSION=${{ github.event.inputs.snapshot-version }}-SNAPSHOT
   plugin:
     runs-on: [ self-hosted-org, linux ]
     container:
