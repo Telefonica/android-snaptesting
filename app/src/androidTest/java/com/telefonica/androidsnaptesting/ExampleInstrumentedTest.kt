@@ -50,7 +50,7 @@ class ExampleInstrumentedTest {
     }
 
     @Test
-    @IgnoreLogs
+    @IgnoreLogs("Reason")
     fun testIgnoreLogsWithoutGoldenFile() {
         recorder.record("My log")
     }
