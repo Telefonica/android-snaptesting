@@ -94,6 +94,7 @@ Regular `connectedXXXXAndroidTest` target invocation is enough for verifications
 ```bash
 ./gradlew :app:connectedDebugAndroidTest
 ```
+At the end of each test, Loggerazzi compares the recorded logs with the corresponding baseline logs (previously generated in recording mode) allowing up to 5 seconds for the logs to match the expected output.
 
 In case of any failures due to screenshots or log verifications, regular JUnit reports include failed tests and the comparison failure reason.
 
