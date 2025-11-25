@@ -45,7 +45,7 @@ public open class GenericLogsRule<LogType>(
         val isTestIgnored = description?.getAnnotation(IgnoreLogs::class.java) != null
 
         val testName = "${description?.className}_${description?.methodName}"
-        val fileName = "${testName}.txt.${System.nanoTime()}"
+        val fileName = "${testName}.${System.nanoTime()}"
 
         val recordedLogs: List<LogType>
 
