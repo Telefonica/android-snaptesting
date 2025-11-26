@@ -149,10 +149,10 @@ class AndroidSnaptestingPlugin @Inject constructor(
                 }
                 if (lastRecordedFile != null) {
                     lastRecordedFile
-                        .renameTo(File(recordedDir, "$key.txt"))
+                        .renameTo(File(recordedDir, key))
                     File(failuresDir, lastRecordedFile.name)
                         .takeIf { it.exists() }
-                        ?.renameTo(File(failuresDir, "$key.txt"))
+                        ?.renameTo(File(failuresDir, key))
                 }
             }
     }
