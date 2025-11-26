@@ -47,23 +47,23 @@ public open class GenericLogsRule<LogType>(
         val testName = "${description?.className}_${description?.methodName}"
         val fileName = "${testName}.txt.${System.nanoTime()}"
 
-        val recordedLogs: List<LogType>
-
         if (InstrumentationRegistry.getArguments().getString("record") != "true" && !isTestIgnored) {
             val goldenFile = directories.context.assets.open("${directories.goldenFilesDir}/${testName}.txt")
             val goldenStringLogs = String(goldenFile.readBytes()).takeIf { it.isNotEmpty() }?.split("\n") ?: emptyList()
             val comparison = compare(goldenStringLogs)
+            writeRecordedLogsToFile(fileName, comparison.recordedLogs)
             if (!comparison.success) {
                 val compareFile = File(directories.failuresDir, fileName)
                 compareFile.createNewFile()
                 compareFile.writeText(comparison.failure!!)
                 throw AssertionError("Logs do not match:\n${comparison.failure}")
             }
-            recordedLogs = comparison.recordedLogs
         } else {
-            recordedLogs = recorder.getRecordedLogs()
+            writeRecordedLogsToFile(fileName, recorder.getRecordedLogs())
         }
+    }
 
+    private fun writeRecordedLogsToFile(fileName: String, recordedLogs: List<LogType>) {
         val log = recordedLogs.joinToString("\n") { stringMapper.fromLog(it) }
         val testFile = File(directories.recordedDir, fileName)
         testFile.createNewFile()
