@@ -24,9 +24,7 @@ jobs:
         run: |
           ./gradlew publishReleasePublicationToMavenRepository -DLIBRARY_VERSION=${{ github.event.inputs.snapshot-version }}-SNAPSHOT
   plugin:
-    runs-on: [ self-hosted-org, linux ]
-    container:
-      image: docker://docker.tuenti.io/android/novum_android:13
+    runs-on: [ ubuntu-latest ]
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
