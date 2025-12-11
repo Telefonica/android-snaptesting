@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.kotlin.jvm) apply false
     alias(libs.plugins.detekt)
-    alias(libs.plugins.publish)
 }
 
 allprojects {
@@ -15,5 +14,3 @@ allprojects {
         buildUponDefaultConfig = true
     }
 }
-
-apply("${rootProject.projectDir}/../publish_maven_central.gradle")

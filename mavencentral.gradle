@@ -11,17 +11,6 @@ apply plugin: 'maven-publish'
 apply plugin: 'signing'
 
 publishing {
-    repositories {
-        maven {
-            credentials {
-                username System.env.NEXUS_USER
-                password System.env.NEXUS_PASS
-            }
-            def releasesRepoUrl = "https://nexusng.tuenti.io/repository/maven-release-private/"
-            def snapshotsRepoUrl = "https://nexusng.tuenti.io/repository/maven-snapshot-private/"
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-        }
-    }
     publications {
         release(MavenPublication) {
             groupId 'com.telefonica'
@@ -70,6 +59,7 @@ publishing {
 
 afterEvaluate {
     tasks.getByName("publishReleasePublicationToMavenLocal").dependsOn("assembleRelease")
+    tasks.getByName("publishReleasePublicationToSonatypeRepository").dependsOn("assembleRelease")
     tasks.getByName("signReleasePublication").dependsOn("assembleRelease")
 }
 
