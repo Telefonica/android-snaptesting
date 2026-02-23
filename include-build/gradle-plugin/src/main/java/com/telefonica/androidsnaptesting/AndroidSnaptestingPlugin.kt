@@ -50,7 +50,6 @@ class AndroidSnaptestingPlugin : Plugin<Project> {
                     "$projectDir/src/$variantSourceFolder/assets/android-snaptesting-golden-files"
                 }
 
-                // Attach work directly on the deviceProviderTask (config-cache safe).
                 // Note: in Kotlin, doFirst/doLast lambdas receive the task as 'it', not 'this'.
                 deviceProviderTask.doFirst {
                     (it as DeviceProviderInstrumentTestTask)
@@ -58,25 +57,26 @@ class AndroidSnaptestingPlugin : Plugin<Project> {
                         .clearAllSnapshots()
                 }
 
-                deviceProviderTask.doLast {
-                    (it as DeviceProviderInstrumentTestTask)
-                        .afterExecution(
+                // Before task as dependency anchor for CI scripts.
+                val beforeTaskName = "androidSnaptestingBefore$capitalizedVariant"
+                project.tasks.register(beforeTaskName, Task::class.java)
+                deviceProviderTask.dependsOn(beforeTaskName)
+
+                // After task runs post-processing via finalizedBy, which guarantees
+                // execution even when the test task fails (needed to pull snapshot
+                // results and generate reports on failure).
+                val afterTaskName = "androidSnaptestingAfter$capitalizedVariant"
+                project.tasks.register(afterTaskName, Task::class.java) { task ->
+                    task.doLast {
+                        deviceProviderTask.afterExecution(
                             applicationId = applicationIdProvider.get(),
                             adbExecutablePath = adbExecutablePath,
                             providerFactory = providerFactory,
                             isRecordMode = isRecordMode,
                             goldenSnapshotsSourcePath = goldenSnapshotsSourcePath,
                         )
+                    }
                 }
-
-                // Keep empty before/after tasks as dependency anchors for CI scripts
-                // (e.g. ci.gradle.kts references these task names).
-                val beforeTaskName = "androidSnaptestingBefore$capitalizedVariant"
-                project.tasks.register(beforeTaskName, Task::class.java)
-                deviceProviderTask.dependsOn(beforeTaskName)
-
-                val afterTaskName = "androidSnaptestingAfter$capitalizedVariant"
-                project.tasks.register(afterTaskName, Task::class.java)
                 deviceProviderTask.finalizedBy(afterTaskName)
             }
         }
