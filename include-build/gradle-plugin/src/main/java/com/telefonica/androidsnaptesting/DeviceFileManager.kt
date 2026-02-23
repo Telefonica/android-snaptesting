@@ -1,7 +1,5 @@
 package com.telefonica.androidsnaptesting
 
-import com.android.build.gradle.TestedExtension
-import com.android.build.gradle.api.TestVariant
 import com.android.build.gradle.internal.tasks.DeviceProviderInstrumentTestTask
 import com.android.build.gradle.internal.testing.ConnectedDevice
 import com.android.ddmlib.CollectingOutputReceiver
@@ -9,25 +7,21 @@ import com.android.ddmlib.FileListingService
 import com.android.ddmlib.FileListingService.FileEntry
 import com.android.ddmlib.IDevice
 import org.gradle.api.file.RegularFile
+import org.gradle.api.provider.ProviderFactory
 import java.io.File
 
-fun DeviceProviderInstrumentTestTask.deviceFileManager(): DeviceFileManager =
-    DeviceFileManager(this)
+fun DeviceProviderInstrumentTestTask.deviceFileManager(
+    applicationId: String,
+    adbExecutablePath: String,
+    providerFactory: ProviderFactory,
+): DeviceFileManager = DeviceFileManager(this, applicationId, adbExecutablePath, providerFactory)
 
 class DeviceFileManager(
     private val testTask: DeviceProviderInstrumentTestTask,
+    private val applicationId: String,
+    private val adbExecutablePath: String,
+    private val providerFactory: ProviderFactory,
 ) {
-    private val extension: TestedExtension = testTask
-        .project
-        .extensions
-        .findByType(TestedExtension::class.java)
-        ?: throw RuntimeException("TestedExtension not found")
-
-    @Suppress("DEPRECATION")
-    private val testedVariant: TestVariant = extension
-        .testVariants
-        .firstOrNull { it.name == testTask.variantName }
-        ?: throw RuntimeException("TestVariant not found")
 
     fun pullRecordedSnapshots(
         destinationPath: String,
@@ -61,15 +55,15 @@ class DeviceFileManager(
     }
 
     private fun getDeviceAndroidSnaptestingRootAbsolutePath(): String =
-        "${FileListingService.DIRECTORY_SDCARD}/Download/android-snaptesting/${testedVariant.applicationId}"
+        "${FileListingService.DIRECTORY_SDCARD}/Download/android-snaptesting/$applicationId"
     private fun getDeviceAndroidSnaptestingSubfolderAbsolutePath(subFolder: String): String =
         "${getDeviceAndroidSnaptestingRootAbsolutePath()}/$subFolder"
 
     @Suppress("UnstableApiUsage")
     private fun withConnectedDevices(runnable: (List<ConnectedDevice>) -> Unit) {
         testTask.deviceProviderFactory.getDeviceProvider(
-            testTask.project.provider {
-                RegularFile { File(extension.adbExecutable.absolutePath) }
+            providerFactory.provider {
+                RegularFile { File(adbExecutablePath) }
             },
             System.getenv("ANDROID_SERIAL"),
         ).let {

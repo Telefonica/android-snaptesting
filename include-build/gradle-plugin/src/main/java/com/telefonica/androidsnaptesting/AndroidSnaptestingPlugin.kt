@@ -1,18 +1,14 @@
 package com.telefonica.androidsnaptesting
 
-import com.android.build.gradle.internal.tasks.AndroidVariantTask
+import com.android.build.gradle.TestedExtension
 import com.android.build.gradle.internal.tasks.DeviceProviderInstrumentTestTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.internal.build.event.BuildEventListenerRegistryInternal
-import org.gradle.tooling.events.OperationCompletionListener
+import org.gradle.api.provider.ProviderFactory
 import java.io.File
-import javax.inject.Inject
 
-class AndroidSnaptestingPlugin @Inject constructor(
-    private val buildEventListenerRegistry: BuildEventListenerRegistryInternal
-) : Plugin<Project> {
+class AndroidSnaptestingPlugin : Plugin<Project> {
 
     override fun apply(project: Project) {
         project.afterEvaluate {
@@ -24,32 +20,76 @@ class AndroidSnaptestingPlugin @Inject constructor(
                 throw AndroidSnaptestingNoDeviceProviderInstrumentTestTasksException()
             }
 
-            deviceProviderInstrumentTestTasks
-                .forEach { deviceProviderTask ->
-                    val capitalizedVariant = deviceProviderTask.variantName.capitalizeFirstLetter()
-                    val beforeTaskName = "androidSnaptestingBefore$capitalizedVariant"
-                    project.tasks.register(beforeTaskName, Task::class.java) { task ->
-                        task.doFirst {
-                            deviceProviderTask.deviceFileManager().clearAllSnapshots()
-                        }
-                    }
-                    deviceProviderTask.dependsOn(beforeTaskName)
+            val extension = project.extensions.findByType(TestedExtension::class.java)
+                ?: throw RuntimeException("TestedExtension not found")
 
-                    val afterTaskName = "androidSnaptestingAfter$capitalizedVariant"
-                    project.tasks.register(afterTaskName, Task::class.java) { task ->
-                        task.doLast {
-                            deviceProviderTask.afterExecution()
-                        }
-                    }
-                    deviceProviderTask.onTaskCompleted {
-                        deviceProviderTask.afterExecution()
-                    }
+            val isRecordMode = project.properties["android.testInstrumentationRunnerArguments.record"] == "true"
+            val projectDir = project.projectDir
+            val providerFactory: ProviderFactory = project.providers
+
+            deviceProviderInstrumentTestTasks.names.forEach { taskName ->
+                val deviceProviderTask = project.tasks.named(
+                    taskName,
+                    DeviceProviderInstrumentTestTask::class.java,
+                ).get()
+                val capitalizedVariant = deviceProviderTask.variantName.capitalizeFirstLetter()
+
+                @Suppress("DEPRECATION")
+                val testedVariant = extension.testVariants
+                    .firstOrNull { it.name == deviceProviderTask.variantName }
+                    ?: throw RuntimeException("TestVariant not found for ${deviceProviderTask.variantName}")
+                val applicationIdProvider = providerFactory.provider { testedVariant.applicationId }
+                val adbExecutablePath = extension.adbExecutable.absolutePath
+
+                val goldenSnapshotsSourcePath = run {
+                    val variantSourceFolder = deviceProviderTask
+                        .variantName
+                        .replace("AndroidTest", "")
+                        .capitalizeFirstLetter()
+                        .let { "androidTest$it" }
+                    "$projectDir/src/$variantSourceFolder/assets/android-snaptesting-golden-files"
                 }
+
+                // Attach work directly on the deviceProviderTask (config-cache safe).
+                // Note: in Kotlin, doFirst/doLast lambdas receive the task as 'it', not 'this'.
+                deviceProviderTask.doFirst {
+                    (it as DeviceProviderInstrumentTestTask)
+                        .deviceFileManager(applicationIdProvider.get(), adbExecutablePath, providerFactory)
+                        .clearAllSnapshots()
+                }
+
+                deviceProviderTask.doLast {
+                    (it as DeviceProviderInstrumentTestTask)
+                        .afterExecution(
+                            applicationId = applicationIdProvider.get(),
+                            adbExecutablePath = adbExecutablePath,
+                            providerFactory = providerFactory,
+                            isRecordMode = isRecordMode,
+                            goldenSnapshotsSourcePath = goldenSnapshotsSourcePath,
+                        )
+                }
+
+                // Keep empty before/after tasks as dependency anchors for CI scripts
+                // (e.g. ci.gradle.kts references these task names).
+                val beforeTaskName = "androidSnaptestingBefore$capitalizedVariant"
+                project.tasks.register(beforeTaskName, Task::class.java)
+                deviceProviderTask.dependsOn(beforeTaskName)
+
+                val afterTaskName = "androidSnaptestingAfter$capitalizedVariant"
+                project.tasks.register(afterTaskName, Task::class.java)
+                deviceProviderTask.finalizedBy(afterTaskName)
+            }
         }
     }
 
-    private fun DeviceProviderInstrumentTestTask.afterExecution() {
-        val deviceFileManager = deviceFileManager()
+    private fun DeviceProviderInstrumentTestTask.afterExecution(
+        applicationId: String,
+        adbExecutablePath: String,
+        providerFactory: ProviderFactory,
+        isRecordMode: Boolean,
+        goldenSnapshotsSourcePath: String,
+    ) {
+        val deviceFileManager = deviceFileManager(applicationId, adbExecutablePath, providerFactory)
 
         val reportsFolder = reportsDir.get().dir("androidSnaptesting")
         val recordedFolderFile = reportsFolder.dir("recorded").asFile.apply {
@@ -64,7 +104,7 @@ class AndroidSnaptestingPlugin @Inject constructor(
         val goldenForFailuresReportFolderFile = reportsFolder.dir("golden").asFile.apply {
             mkdirs()
         }
-        val goldenFolderFile = File(getAbsoluteGoldenSnapshotsSourcePath())
+        val goldenFolderFile = File(goldenSnapshotsSourcePath)
 
         File("${reportsFolder.asFile.absolutePath}/recorded.html").apply {
             createNewFile()
@@ -76,7 +116,7 @@ class AndroidSnaptestingPlugin @Inject constructor(
             writeText(report)
         }
 
-        if (project.properties["android.testInstrumentationRunnerArguments.record"] != "true") {
+        if (!isRecordMode) {
             File("${reportsFolder.asFile.absolutePath}/failures.html").apply {
                 createNewFile()
                 val failuresFiles = failuresFolderFile.listFiles()?.asList() ?: emptyList()
@@ -99,33 +139,11 @@ class AndroidSnaptestingPlugin @Inject constructor(
                 writeText(report)
             }
         } else {
-            File(getAbsoluteGoldenSnapshotsSourcePath()).apply {
+            File(goldenSnapshotsSourcePath).apply {
                 mkdirs()
                 recordedFolderFile.copyRecursively(this, true)
             }
         }
-    }
-
-    private fun Task.onTaskCompleted(onCompleted: () -> Unit) {
-        buildEventListenerRegistry.onTaskCompletion(
-            project.provider {
-                OperationCompletionListener {
-                    if (it.descriptor.name != path) {
-                        return@OperationCompletionListener
-                    }
-                    onCompleted()
-                }
-            }
-        )
-    }
-
-    private fun AndroidVariantTask.getAbsoluteGoldenSnapshotsSourcePath(): String {
-        val variantSourceFolder = this
-            .variantName
-            .replace("AndroidTest", "")
-            .capitalizeFirstLetter()
-            .let { "androidTest$it" }
-        return "${project.projectDir}/src/$variantSourceFolder/assets/android-snaptesting-golden-files"
     }
 
     private fun String.capitalizeFirstLetter(): String {
