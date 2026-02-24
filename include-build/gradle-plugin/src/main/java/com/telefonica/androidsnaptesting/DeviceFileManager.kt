@@ -14,10 +14,10 @@ fun DeviceProviderInstrumentTestTask.deviceFileManager(
     applicationId: String,
     adbExecutablePath: String,
     providerFactory: ProviderFactory,
-): DeviceFileManager = DeviceFileManager(this, applicationId, adbExecutablePath, providerFactory)
+): DeviceFileManager = DeviceFileManager(this.deviceProviderFactory, applicationId, adbExecutablePath, providerFactory)
 
 class DeviceFileManager(
-    private val testTask: DeviceProviderInstrumentTestTask,
+    private val deviceProviderFactory: DeviceProviderInstrumentTestTask.DeviceProviderFactory,
     private val applicationId: String,
     private val adbExecutablePath: String,
     private val providerFactory: ProviderFactory,
@@ -61,7 +61,7 @@ class DeviceFileManager(
 
     @Suppress("UnstableApiUsage")
     private fun withConnectedDevices(runnable: (List<ConnectedDevice>) -> Unit) {
-        testTask.deviceProviderFactory.getDeviceProvider(
+        deviceProviderFactory.getDeviceProvider(
             providerFactory.provider {
                 RegularFile { File(adbExecutablePath) }
             },

@@ -5,6 +5,7 @@ import com.android.build.gradle.internal.tasks.DeviceProviderInstrumentTestTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.file.Directory
 import org.gradle.api.provider.ProviderFactory
 import java.io.File
 
@@ -24,7 +25,6 @@ class AndroidSnaptestingPlugin : Plugin<Project> {
                 ?: throw RuntimeException("TestedExtension not found")
 
             val isRecordMode = project.properties["android.testInstrumentationRunnerArguments.record"] == "true"
-            val projectDir = project.projectDir
             val providerFactory: ProviderFactory = project.providers
 
             deviceProviderInstrumentTestTasks.names.forEach { taskName ->
@@ -32,66 +32,86 @@ class AndroidSnaptestingPlugin : Plugin<Project> {
                     taskName,
                     DeviceProviderInstrumentTestTask::class.java,
                 ).get()
-                val capitalizedVariant = deviceProviderTask.variantName.capitalizeFirstLetter()
-
-                @Suppress("DEPRECATION")
-                val testedVariant = extension.testVariants
-                    .firstOrNull { it.name == deviceProviderTask.variantName }
-                    ?: throw RuntimeException("TestVariant not found for ${deviceProviderTask.variantName}")
-                val applicationIdProvider = providerFactory.provider { testedVariant.applicationId }
-                val adbExecutablePath = extension.adbExecutable.absolutePath
-
-                val goldenSnapshotsSourcePath = run {
-                    val variantSourceFolder = deviceProviderTask
-                        .variantName
-                        .replace("AndroidTest", "")
-                        .capitalizeFirstLetter()
-                        .let { "androidTest$it" }
-                    "$projectDir/src/$variantSourceFolder/assets/android-snaptesting-golden-files"
-                }
-
-                // Note: in Kotlin, doFirst/doLast lambdas receive the task as 'it', not 'this'.
-                deviceProviderTask.doFirst {
-                    (it as DeviceProviderInstrumentTestTask)
-                        .deviceFileManager(applicationIdProvider.get(), adbExecutablePath, providerFactory)
-                        .clearAllSnapshots()
-                }
-
-                // Before task as dependency anchor for CI scripts.
-                val beforeTaskName = "androidSnaptestingBefore$capitalizedVariant"
-                project.tasks.register(beforeTaskName, Task::class.java)
-                deviceProviderTask.dependsOn(beforeTaskName)
-
-                // After task runs post-processing via finalizedBy, which guarantees
-                // execution even when the test task fails (needed to pull snapshot
-                // results and generate reports on failure).
-                val afterTaskName = "androidSnaptestingAfter$capitalizedVariant"
-                project.tasks.register(afterTaskName, Task::class.java) { task ->
-                    task.doLast {
-                        deviceProviderTask.afterExecution(
-                            applicationId = applicationIdProvider.get(),
-                            adbExecutablePath = adbExecutablePath,
-                            providerFactory = providerFactory,
-                            isRecordMode = isRecordMode,
-                            goldenSnapshotsSourcePath = goldenSnapshotsSourcePath,
-                        )
-                    }
-                }
-                deviceProviderTask.finalizedBy(afterTaskName)
+                registerTasksForVariant(project, taskName, deviceProviderTask, extension, isRecordMode, providerFactory)
             }
         }
     }
 
-    private fun DeviceProviderInstrumentTestTask.afterExecution(
+    @Suppress("DEPRECATION")
+    private fun registerTasksForVariant(
+        project: Project,
+        taskName: String,
+        deviceProviderTask: DeviceProviderInstrumentTestTask,
+        extension: TestedExtension,
+        isRecordMode: Boolean,
+        providerFactory: ProviderFactory,
+    ) {
+        val capitalizedVariant = deviceProviderTask.variantName.capitalizeFirstLetter()
+
+        val testedVariant = extension.testVariants
+            .firstOrNull { it.name == deviceProviderTask.variantName }
+            ?: throw RuntimeException("TestVariant not found for ${deviceProviderTask.variantName}")
+        val applicationIdProvider = providerFactory.provider { testedVariant.applicationId }
+        val adbExecutablePath = extension.adbExecutable.absolutePath
+
+        val goldenSnapshotsSourcePath = run {
+            val variantSourceFolder = deviceProviderTask
+                .variantName
+                .replace("AndroidTest", "")
+                .capitalizeFirstLetter()
+                .let { "androidTest$it" }
+            "${project.projectDir}/src/$variantSourceFolder/assets/android-snaptesting-golden-files"
+        }
+
+        // Shared provider — used by both before and after tasks (config-cache safe: references task by name)
+        val deviceProviderFactoryProvider = project.tasks.named(taskName, DeviceProviderInstrumentTestTask::class.java)
+            .map { it.deviceProviderFactory }
+
+        // Before task clears snapshots and serves as dependency anchor for CI scripts.
+        val beforeTaskName = "androidSnaptestingBefore$capitalizedVariant"
+        project.tasks.register(beforeTaskName, Task::class.java) { task ->
+            task.doFirst {
+                DeviceFileManager(deviceProviderFactoryProvider.get(), applicationIdProvider.get(), adbExecutablePath, providerFactory)
+                    .clearAllSnapshots()
+            }
+        }
+        deviceProviderTask.dependsOn(beforeTaskName)
+
+        // After task runs post-processing via finalizedBy, which guarantees
+        // execution even when the test task fails (needed to pull snapshot
+        // results and generate reports on failure).
+        val afterTaskName = "androidSnaptestingAfter$capitalizedVariant"
+        val reportsDirProvider = project.tasks.named(taskName, DeviceProviderInstrumentTestTask::class.java)
+            .flatMap { it.reportsDir }
+
+        project.tasks.register(afterTaskName, Task::class.java) { task ->
+            task.doLast {
+                afterExecution(
+                    deviceProviderFactory = deviceProviderFactoryProvider.get(),
+                    reportsDir = reportsDirProvider.get(),
+                    applicationId = applicationIdProvider.get(),
+                    adbExecutablePath = adbExecutablePath,
+                    providerFactory = providerFactory,
+                    isRecordMode = isRecordMode,
+                    goldenSnapshotsSourcePath = goldenSnapshotsSourcePath,
+                )
+            }
+        }
+        deviceProviderTask.finalizedBy(afterTaskName)
+    }
+
+    private fun afterExecution(
+        deviceProviderFactory: DeviceProviderInstrumentTestTask.DeviceProviderFactory,
+        reportsDir: Directory,
         applicationId: String,
         adbExecutablePath: String,
         providerFactory: ProviderFactory,
         isRecordMode: Boolean,
         goldenSnapshotsSourcePath: String,
     ) {
-        val deviceFileManager = deviceFileManager(applicationId, adbExecutablePath, providerFactory)
+        val deviceFileManager = DeviceFileManager(deviceProviderFactory, applicationId, adbExecutablePath, providerFactory)
 
-        val reportsFolder = reportsDir.get().dir("androidSnaptesting")
+        val reportsFolder = reportsDir.dir("androidSnaptesting")
         val recordedFolderFile = reportsFolder.dir("recorded").asFile.apply {
             mkdirs()
             deviceFileManager.pullRecordedSnapshots(absolutePath)
