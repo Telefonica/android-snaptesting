@@ -2,13 +2,10 @@ package com.telefonica.androidsnaptesting
 
 import com.android.build.gradle.internal.tasks.DeviceProviderInstrumentTestTask
 import com.android.build.gradle.internal.testing.ConnectedDevice
-import com.android.ddmlib.CollectingOutputReceiver
-import com.android.ddmlib.FileListingService
-import com.android.ddmlib.FileListingService.FileEntry
-import com.android.ddmlib.IDevice
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.ProviderFactory
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 fun DeviceProviderInstrumentTestTask.deviceFileManager(
     applicationId: String,
@@ -23,39 +20,25 @@ class DeviceFileManager(
     private val providerFactory: ProviderFactory,
 ) {
 
-    fun pullRecordedSnapshots(
-        destinationPath: String,
-    ) {
+    fun pullRecordedSnapshots(destinationPath: String) {
         pullSnapshots("recorded", destinationPath)
     }
 
-    fun pullFailuresSnapshots(
-        destinationPath: String,
-    ) {
+    fun pullFailuresSnapshots(destinationPath: String) {
         pullSnapshots("failures", destinationPath)
     }
 
     fun clearAllSnapshots() {
         withConnectedDevices { devices ->
-            devices.forEach {
-                val receiver = CollectingOutputReceiver()
-                it.iDevice.executeShellCommand("rm -rf ${getDeviceAndroidSnaptestingRootAbsolutePath()}", receiver)
-                println(receiver.output)
+            devices.forEach { device ->
+                runAdb(device.serialNumber, "shell", "rm", "-rf", getDeviceAndroidSnaptestingRootAbsolutePath())
             }
         }
     }
 
-    private fun String.toFileEntry(): FileEntry {
-        val parts = this.split("/")
-        var fileEntry = FileEntry(null, null, FileListingService.TYPE_DIRECTORY, true)
-        parts.forEach {
-            fileEntry = FileEntry(fileEntry, it, FileListingService.TYPE_DIRECTORY, false)
-        }
-        return fileEntry
-    }
-
     private fun getDeviceAndroidSnaptestingRootAbsolutePath(): String =
-        "${FileListingService.DIRECTORY_SDCARD}/Download/android-snaptesting/$applicationId"
+        "/sdcard/Download/android-snaptesting/$applicationId"
+
     private fun getDeviceAndroidSnaptestingSubfolderAbsolutePath(subFolder: String): String =
         "${getDeviceAndroidSnaptestingRootAbsolutePath()}/$subFolder"
 
@@ -77,25 +60,40 @@ class DeviceFileManager(
         androidSnaptestingSubFolderInDevice: String,
         destinationPath: String,
     ) {
-        val fileEntry = getDeviceAndroidSnaptestingSubfolderAbsolutePath(androidSnaptestingSubFolderInDevice).toFileEntry()
+        val remotePath = getDeviceAndroidSnaptestingSubfolderAbsolutePath(androidSnaptestingSubFolderInDevice)
         withConnectedDevices { devices ->
-            devices.forEach {
-                pullFolderFiles(
-                    fileEntry,
-                    it.iDevice,
-                    destinationPath,
-                )
+            devices.forEach { device ->
+                val serial = device.serialNumber
+                // List files in the remote folder; ignore errors if the folder doesn't exist yet
+                val lsOutput = runAdbCapture(serial, "shell", "ls", remotePath)
+                val fileNames = lsOutput.lines()
+                    .map { it.trim() }
+                    .filter { it.isNotBlank() && !it.startsWith("ls:") && !it.contains("No such file") }
+                // Pull each file to the local destination
+                fileNames.forEach { fileName ->
+                    runAdb(serial, "pull", "$remotePath/$fileName", "$destinationPath/$fileName")
+                }
             }
         }
     }
 
-    private fun pullFolderFiles(
-        androidSnaptestingDeviceFolder: FileEntry,
-        device: IDevice,
-        destinationPath: String,
-    ) {
-        device.fileListingService.getChildrenSync(androidSnaptestingDeviceFolder).forEach {
-            device.pullFile(it.fullPath, "$destinationPath/${it.name}")
+    private fun runAdb(serial: String, vararg args: String) {
+        val output = runAdbCapture(serial, *args)
+        println(output)
+    }
+
+    private fun runAdbCapture(serial: String, vararg args: String): String {
+        val command = buildList {
+            add(adbExecutablePath)
+            add("-s")
+            add(serial)
+            addAll(args.toList())
         }
+        val process = ProcessBuilder(command)
+            .redirectErrorStream(true)
+            .start()
+        val output = process.inputStream.bufferedReader().readText()
+        process.waitFor(60, TimeUnit.SECONDS)
+        return output
     }
 }

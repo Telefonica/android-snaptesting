@@ -17,7 +17,7 @@ publishing {
             artifactId 'androidsnaptesting'
             version version
 
-            artifact("$buildDir/outputs/aar/android-snaptesting-release.aar")
+            artifact("${layout.buildDirectory.get().asFile}/outputs/aar/android-snaptesting-release.aar")
             artifact androidSourcesJar
 
             pom {
