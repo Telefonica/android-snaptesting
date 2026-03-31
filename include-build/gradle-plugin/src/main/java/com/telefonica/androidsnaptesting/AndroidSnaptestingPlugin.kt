@@ -14,13 +14,13 @@ import java.io.File
 class AndroidSnaptestingPlugin : Plugin<Project> {
 
     override fun apply(project: Project) {
-        // Collect applicationId per test-variant name at configuration time using the new variant API.
-        // onVariants runs during project configuration, before afterEvaluate.
         val applicationIds = mutableMapOf<String, Provider<String>>()
 
         project.extensions.findByType(ApplicationAndroidComponentsExtension::class.java)
             ?.onVariants { variant ->
-                applicationIds["${variant.name}AndroidTest"] = variant.applicationId
+                variant.androidTest?.let { androidTest ->
+                    applicationIds["${variant.name}AndroidTest"] = androidTest.applicationId
+                }
             }
 
         project.afterEvaluate {

@@ -64,12 +64,10 @@ class DeviceFileManager(
         withConnectedDevices { devices ->
             devices.forEach { device ->
                 val serial = device.serialNumber
-                // List files in the remote folder; ignore errors if the folder doesn't exist yet
-                val lsResult = runAdbCapture(serial, "shell", "ls", remotePath)
+                val lsResult = runAdbCapture(serial, "shell", "ls", remotePath, logErrors = false)
                 val fileNames = lsResult.output.lines()
                     .map { it.trim() }
                     .filter { it.isNotBlank() && !it.startsWith("ls:") && !it.contains("No such file") }
-                // Pull each file to the local destination
                 fileNames.forEach { fileName ->
                     runAdb(serial, "pull", "$remotePath/$fileName", "$destinationPath/$fileName")
                 }
@@ -86,6 +84,7 @@ class DeviceFileManager(
         serial: String,
         vararg args: String,
         throwOnError: Boolean = false,
+        logErrors: Boolean = true,
     ): AdbResult {
         val command = buildList {
             add(adbExecutablePath)
@@ -104,13 +103,13 @@ class DeviceFileManager(
             if (!finished || exitCode != 0) {
                 val message = "ADB command failed: ${command.joinToString(" ")}\nExit code: $exitCode\nOutput: $output\nError: $error"
                 if (throwOnError) throw RuntimeException(message)
-                else println(message)
+                else if (logErrors) println(message)
             }
             return AdbResult(output, error, exitCode)
         } catch (e: Exception) {
             val message = "Exception running ADB command: ${command.joinToString(" ")}\n${e.message}"
             if (throwOnError) throw RuntimeException(message, e)
-            else println(message)
+            else if (logErrors) println(message)
             return AdbResult("", e.message ?: "", -1)
         }
     }
