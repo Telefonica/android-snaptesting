@@ -65,8 +65,8 @@ class DeviceFileManager(
             devices.forEach { device ->
                 val serial = device.serialNumber
                 // List files in the remote folder; ignore errors if the folder doesn't exist yet
-                val lsOutput = runAdbCapture(serial, "shell", "ls", remotePath)
-                val fileNames = lsOutput.lines()
+                val lsResult = runAdbCapture(serial, "shell", "ls", remotePath)
+                val fileNames = lsResult.output.lines()
                     .map { it.trim() }
                     .filter { it.isNotBlank() && !it.startsWith("ls:") && !it.contains("No such file") }
                 // Pull each file to the local destination
@@ -78,22 +78,42 @@ class DeviceFileManager(
     }
 
     private fun runAdb(serial: String, vararg args: String) {
-        val output = runAdbCapture(serial, *args)
-        println(output)
+        val result = runAdbCapture(serial, *args, throwOnError = true)
+        println(result.output)
     }
 
-    private fun runAdbCapture(serial: String, vararg args: String): String {
+    private fun runAdbCapture(
+        serial: String,
+        vararg args: String,
+        throwOnError: Boolean = false,
+    ): AdbResult {
         val command = buildList {
             add(adbExecutablePath)
             add("-s")
             add(serial)
             addAll(args.toList())
         }
-        val process = ProcessBuilder(command)
-            .redirectErrorStream(true)
-            .start()
-        val output = process.inputStream.bufferedReader().readText()
-        process.waitFor(60, TimeUnit.SECONDS)
-        return output
+        try {
+            val process = ProcessBuilder(command)
+                .redirectErrorStream(false)
+                .start()
+            val output = process.inputStream.bufferedReader().readText()
+            val error = process.errorStream.bufferedReader().readText()
+            val finished = process.waitFor(60, TimeUnit.SECONDS)
+            val exitCode = process.exitValue()
+            if (!finished || exitCode != 0) {
+                val message = "ADB command failed: ${command.joinToString(" ")}\nExit code: $exitCode\nOutput: $output\nError: $error"
+                if (throwOnError) throw RuntimeException(message)
+                else println(message)
+            }
+            return AdbResult(output, error, exitCode)
+        } catch (e: Exception) {
+            val message = "Exception running ADB command: ${command.joinToString(" ")}\n${e.message}"
+            if (throwOnError) throw RuntimeException(message, e)
+            else println(message)
+            return AdbResult("", e.message ?: "", -1)
+        }
     }
+
+    private data class AdbResult(val output: String, val error: String, val exitCode: Int)
 }

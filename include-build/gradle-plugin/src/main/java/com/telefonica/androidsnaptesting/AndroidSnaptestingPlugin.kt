@@ -20,7 +20,6 @@ class AndroidSnaptestingPlugin : Plugin<Project> {
 
         project.extensions.findByType(ApplicationAndroidComponentsExtension::class.java)
             ?.onVariants { variant ->
-                // variant.name == "debug" → test task variant name == "debugAndroidTest"
                 applicationIds["${variant.name}AndroidTest"] = variant.applicationId
             }
 
