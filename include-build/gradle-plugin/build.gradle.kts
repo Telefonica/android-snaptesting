@@ -15,7 +15,6 @@ dependencies {
     implementation(libs.android.gradle)
     implementation(libs.android.builder.test.api)
     implementation(libs.android.ddmlib)
-    implementation(libs.android.common)
 }
 
 gradlePlugin {

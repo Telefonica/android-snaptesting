@@ -60,7 +60,6 @@ class AndroidSnaptestingPlugin : Plugin<Project> {
         }
     }
 
-    @Suppress("DEPRECATION")
     private fun registerTasksForVariant(
         project: Project,
         taskName: String,

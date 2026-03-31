@@ -1,6 +1,5 @@
 [versions]
 agp = "9.1.0"
-common = "32.1.0"
 ddmlib = "32.1.0"
 kotlin = "2.3.0"
 detekt = "1.23.6"
@@ -8,7 +7,6 @@ publish-plugin = "1.2.0"
 
 [libraries]
 android-builder-test-api = { module = "com.android.tools.build:builder-test-api", version.ref = "agp" }
-android-common = { module = "com.android.tools:common", version.ref = "common" }
 android-ddmlib = { module = "com.android.tools.ddms:ddmlib", version.ref = "ddmlib" }
 android-gradle = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 
