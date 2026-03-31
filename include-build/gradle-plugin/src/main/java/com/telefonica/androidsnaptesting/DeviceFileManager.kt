@@ -92,7 +92,7 @@ class DeviceFileManager(
             add(serial)
             addAll(args.toList())
         }
-        try {
+        val result = try {
             val process = ProcessBuilder(command)
                 .redirectErrorStream(false)
                 .start()
@@ -100,19 +100,21 @@ class DeviceFileManager(
             val error = process.errorStream.bufferedReader().readText()
             val finished = process.waitFor(60, TimeUnit.SECONDS)
             val exitCode = process.exitValue()
-            if (!finished || exitCode != 0) {
-                val message = "ADB command failed: ${command.joinToString(" ")}\nExit code: $exitCode\nOutput: $output\nError: $error"
-                if (throwOnError) throw RuntimeException(message)
-                else if (logErrors) println(message)
-            }
-            return AdbResult(output, error, exitCode)
+            AdbResult(output, error, exitCode, finished)
         } catch (e: Exception) {
             val message = "Exception running ADB command: ${command.joinToString(" ")}\n${e.message}"
             if (throwOnError) throw RuntimeException(message, e)
             else if (logErrors) println(message)
             return AdbResult("", e.message ?: "", -1)
         }
+
+        if (!result.finished || result.exitCode != 0) {
+            val message = "ADB command failed: ${command.joinToString(" ")}\nExit code: ${result.exitCode}\nOutput: ${result.output}\nError: ${result.error}"
+            if (throwOnError) throw RuntimeException(message)
+            else if (logErrors) println(message)
+        }
+        return result
     }
 
-    private data class AdbResult(val output: String, val error: String, val exitCode: Int)
+    private data class AdbResult(val output: String, val error: String, val exitCode: Int, val finished: Boolean = true)
 }
