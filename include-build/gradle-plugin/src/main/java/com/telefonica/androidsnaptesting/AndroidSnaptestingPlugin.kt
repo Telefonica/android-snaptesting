@@ -1,17 +1,28 @@
 package com.telefonica.androidsnaptesting
 
-import com.android.build.gradle.TestedExtension
+import com.android.build.api.variant.AndroidComponentsExtension
+import com.android.build.api.variant.ApplicationAndroidComponentsExtension
 import com.android.build.gradle.internal.tasks.DeviceProviderInstrumentTestTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.Directory
+import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
 import java.io.File
 
 class AndroidSnaptestingPlugin : Plugin<Project> {
 
     override fun apply(project: Project) {
+        val applicationIds = mutableMapOf<String, Provider<String>>()
+
+        project.extensions.findByType(ApplicationAndroidComponentsExtension::class.java)
+            ?.onVariants { variant ->
+                variant.androidTest?.let { androidTest ->
+                    applicationIds["${variant.name}AndroidTest"] = androidTest.applicationId
+                }
+            }
+
         project.afterEvaluate {
 
             val deviceProviderInstrumentTestTasks = project.tasks
@@ -21,8 +32,8 @@ class AndroidSnaptestingPlugin : Plugin<Project> {
                 throw AndroidSnaptestingNoDeviceProviderInstrumentTestTasksException()
             }
 
-            val extension = project.extensions.findByType(TestedExtension::class.java)
-                ?: throw RuntimeException("TestedExtension not found")
+            val androidComponents = project.extensions.findByType(AndroidComponentsExtension::class.java)
+                ?: throw RuntimeException("AndroidComponentsExtension not found")
 
             val isRecordMode = project.properties["android.testInstrumentationRunnerArguments.record"] == "true"
             val providerFactory: ProviderFactory = project.providers
@@ -32,27 +43,33 @@ class AndroidSnaptestingPlugin : Plugin<Project> {
                     taskName,
                     DeviceProviderInstrumentTestTask::class.java,
                 ).get()
-                registerTasksForVariant(project, taskName, deviceProviderTask, extension, isRecordMode, providerFactory)
+                val variantName = deviceProviderTask.variantName
+                val applicationIdProvider = applicationIds[variantName]
+                    ?: throw RuntimeException(
+                        "applicationId not found for test variant '$variantName'. " +
+                            "Available variants: ${applicationIds.keys}. " +
+                            "Make sure the plugin is applied to a com.android.application module."
+                    )
+                registerTasksForVariant(
+                    project, taskName, deviceProviderTask,
+                    androidComponents, applicationIdProvider,
+                    isRecordMode, providerFactory,
+                )
             }
         }
     }
 
-    @Suppress("DEPRECATION")
     private fun registerTasksForVariant(
         project: Project,
         taskName: String,
         deviceProviderTask: DeviceProviderInstrumentTestTask,
-        extension: TestedExtension,
+        androidComponents: AndroidComponentsExtension<*, *, *>,
+        applicationIdProvider: Provider<String>,
         isRecordMode: Boolean,
         providerFactory: ProviderFactory,
     ) {
         val capitalizedVariant = deviceProviderTask.variantName.capitalizeFirstLetter()
-
-        val testedVariant = extension.testVariants
-            .firstOrNull { it.name == deviceProviderTask.variantName }
-            ?: throw RuntimeException("TestVariant not found for ${deviceProviderTask.variantName}")
-        val applicationIdProvider = providerFactory.provider { testedVariant.applicationId }
-        val adbExecutablePath = extension.adbExecutable.absolutePath
+        val adbExecutablePath = androidComponents.sdkComponents.adb.get().asFile.absolutePath
 
         val goldenSnapshotsSourcePath = run {
             val variantSourceFolder = deviceProviderTask

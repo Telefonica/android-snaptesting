@@ -2,13 +2,10 @@ package com.telefonica.androidsnaptesting
 
 import com.android.build.gradle.internal.tasks.DeviceProviderInstrumentTestTask
 import com.android.build.gradle.internal.testing.ConnectedDevice
-import com.android.ddmlib.CollectingOutputReceiver
-import com.android.ddmlib.FileListingService
-import com.android.ddmlib.FileListingService.FileEntry
-import com.android.ddmlib.IDevice
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.ProviderFactory
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 fun DeviceProviderInstrumentTestTask.deviceFileManager(
     applicationId: String,
@@ -23,39 +20,25 @@ class DeviceFileManager(
     private val providerFactory: ProviderFactory,
 ) {
 
-    fun pullRecordedSnapshots(
-        destinationPath: String,
-    ) {
+    fun pullRecordedSnapshots(destinationPath: String) {
         pullSnapshots("recorded", destinationPath)
     }
 
-    fun pullFailuresSnapshots(
-        destinationPath: String,
-    ) {
+    fun pullFailuresSnapshots(destinationPath: String) {
         pullSnapshots("failures", destinationPath)
     }
 
     fun clearAllSnapshots() {
         withConnectedDevices { devices ->
-            devices.forEach {
-                val receiver = CollectingOutputReceiver()
-                it.iDevice.executeShellCommand("rm -rf ${getDeviceAndroidSnaptestingRootAbsolutePath()}", receiver)
-                println(receiver.output)
+            devices.forEach { device ->
+                runAdb(device.serialNumber, "shell", "rm", "-rf", getDeviceAndroidSnaptestingRootAbsolutePath())
             }
         }
     }
 
-    private fun String.toFileEntry(): FileEntry {
-        val parts = this.split("/")
-        var fileEntry = FileEntry(null, null, FileListingService.TYPE_DIRECTORY, true)
-        parts.forEach {
-            fileEntry = FileEntry(fileEntry, it, FileListingService.TYPE_DIRECTORY, false)
-        }
-        return fileEntry
-    }
-
     private fun getDeviceAndroidSnaptestingRootAbsolutePath(): String =
-        "${FileListingService.DIRECTORY_SDCARD}/Download/android-snaptesting/$applicationId"
+        "/sdcard/Download/android-snaptesting/$applicationId"
+
     private fun getDeviceAndroidSnaptestingSubfolderAbsolutePath(subFolder: String): String =
         "${getDeviceAndroidSnaptestingRootAbsolutePath()}/$subFolder"
 
@@ -77,25 +60,61 @@ class DeviceFileManager(
         androidSnaptestingSubFolderInDevice: String,
         destinationPath: String,
     ) {
-        val fileEntry = getDeviceAndroidSnaptestingSubfolderAbsolutePath(androidSnaptestingSubFolderInDevice).toFileEntry()
+        val remotePath = getDeviceAndroidSnaptestingSubfolderAbsolutePath(androidSnaptestingSubFolderInDevice)
         withConnectedDevices { devices ->
-            devices.forEach {
-                pullFolderFiles(
-                    fileEntry,
-                    it.iDevice,
-                    destinationPath,
-                )
+            devices.forEach { device ->
+                val serial = device.serialNumber
+                val lsResult = runAdbCapture(serial, "shell", "ls", remotePath, logErrors = false)
+                val fileNames = lsResult.output.lines()
+                    .map { it.trim() }
+                    .filter { it.isNotBlank() && !it.startsWith("ls:") && !it.contains("No such file") }
+                fileNames.forEach { fileName ->
+                    runAdb(serial, "pull", "$remotePath/$fileName", "$destinationPath/$fileName")
+                }
             }
         }
     }
 
-    private fun pullFolderFiles(
-        androidSnaptestingDeviceFolder: FileEntry,
-        device: IDevice,
-        destinationPath: String,
-    ) {
-        device.fileListingService.getChildrenSync(androidSnaptestingDeviceFolder).forEach {
-            device.pullFile(it.fullPath, "$destinationPath/${it.name}")
-        }
+    private fun runAdb(serial: String, vararg args: String) {
+        val result = runAdbCapture(serial, *args, throwOnError = true)
+        println(result.output)
     }
+
+    private fun runAdbCapture(
+        serial: String,
+        vararg args: String,
+        throwOnError: Boolean = false,
+        logErrors: Boolean = true,
+    ): AdbResult {
+        val command = buildList {
+            add(adbExecutablePath)
+            add("-s")
+            add(serial)
+            addAll(args.toList())
+        }
+        val result = try {
+            val process = ProcessBuilder(command)
+                .redirectErrorStream(false)
+                .start()
+            val output = process.inputStream.bufferedReader().readText()
+            val error = process.errorStream.bufferedReader().readText()
+            val finished = process.waitFor(60, TimeUnit.SECONDS)
+            val exitCode = process.exitValue()
+            AdbResult(output, error, exitCode, finished)
+        } catch (e: Exception) {
+            val message = "Exception running ADB command: ${command.joinToString(" ")}\n${e.message}"
+            if (throwOnError) throw RuntimeException(message, e)
+            else if (logErrors) println(message)
+            return AdbResult("", e.message ?: "", -1)
+        }
+
+        if (!result.finished || result.exitCode != 0) {
+            val message = "ADB command failed: ${command.joinToString(" ")}\nExit code: ${result.exitCode}\nOutput: ${result.output}\nError: ${result.error}"
+            if (throwOnError) throw RuntimeException(message)
+            else if (logErrors) println(message)
+        }
+        return result
+    }
+
+    private data class AdbResult(val output: String, val error: String, val exitCode: Int, val finished: Boolean = true)
 }

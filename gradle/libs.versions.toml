@@ -1,11 +1,11 @@
 [versions]
-agp = "8.13.1"
+agp = "9.1.0"
 constraintlayout = "2.2.1"
 min-sdk = "23"
 target-sdk = "36"
 compile-sdk = "36"
 material = "1.12.0"
-kotlin = "2.1.21"
+kotlin = "2.3.0"
 appcompat = "1.7.0"
 androidx-junit = "1.2.1"
 androidx-monitor = "1.7.2"
