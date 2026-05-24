@@ -2,6 +2,7 @@ package com.telefonica.androidsnaptesting
 
 import com.android.build.api.variant.AndroidComponentsExtension
 import com.android.build.api.variant.ApplicationAndroidComponentsExtension
+import com.android.build.api.variant.LibraryAndroidComponentsExtension
 import com.android.build.gradle.internal.tasks.DeviceProviderInstrumentTestTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -14,12 +15,22 @@ import java.io.File
 class AndroidSnaptestingPlugin : Plugin<Project> {
 
     override fun apply(project: Project) {
-        val applicationIds = mutableMapOf<String, Provider<String>>()
 
+        val variantIdentifiers = mutableMapOf<String, Provider<String>>()
+
+        // Support application modules
         project.extensions.findByType(ApplicationAndroidComponentsExtension::class.java)
             ?.onVariants { variant ->
                 variant.androidTest?.let { androidTest ->
-                    applicationIds["${variant.name}AndroidTest"] = androidTest.applicationId
+                    variantIdentifiers["${variant.name}AndroidTest"] = androidTest.applicationId
+                }
+            }
+
+        // Support library modules
+        project.extensions.findByType(LibraryAndroidComponentsExtension::class.java)
+            ?.onVariants { variant ->
+                variant.androidTest?.let { androidTest ->
+                    variantIdentifiers["${variant.name}AndroidTest"] = androidTest.namespace
                 }
             }
 
@@ -44,15 +55,15 @@ class AndroidSnaptestingPlugin : Plugin<Project> {
                     DeviceProviderInstrumentTestTask::class.java,
                 ).get()
                 val variantName = deviceProviderTask.variantName
-                val applicationIdProvider = applicationIds[variantName]
+                val identifierProvider = variantIdentifiers[variantName]
                     ?: throw RuntimeException(
-                        "applicationId not found for test variant '$variantName'. " +
-                            "Available variants: ${applicationIds.keys}. " +
-                            "Make sure the plugin is applied to a com.android.application module."
+                        "applicationId/namespace not found for test variant '$variantName'. " +
+                            "Available variants: ${variantIdentifiers.keys}. " +
+                            "Make sure the plugin is applied to a com.android.application or com.android.library module."
                     )
                 registerTasksForVariant(
                     project, taskName, deviceProviderTask,
-                    androidComponents, applicationIdProvider,
+                    androidComponents, identifierProvider,
                     isRecordMode, providerFactory,
                 )
             }
@@ -64,7 +75,7 @@ class AndroidSnaptestingPlugin : Plugin<Project> {
         taskName: String,
         deviceProviderTask: DeviceProviderInstrumentTestTask,
         androidComponents: AndroidComponentsExtension<*, *, *>,
-        applicationIdProvider: Provider<String>,
+        identifierProvider: Provider<String>,
         isRecordMode: Boolean,
         providerFactory: ProviderFactory,
     ) {
@@ -88,7 +99,7 @@ class AndroidSnaptestingPlugin : Plugin<Project> {
         val beforeTaskName = "androidSnaptestingBefore$capitalizedVariant"
         project.tasks.register(beforeTaskName, Task::class.java) { task ->
             task.doFirst {
-                DeviceFileManager(deviceProviderFactoryProvider.get(), applicationIdProvider.get(), adbExecutablePath, providerFactory)
+                DeviceFileManager(deviceProviderFactoryProvider.get(), identifierProvider.get(), adbExecutablePath, providerFactory)
                     .clearAllSnapshots()
             }
         }
@@ -106,7 +117,7 @@ class AndroidSnaptestingPlugin : Plugin<Project> {
                 afterExecution(
                     deviceProviderFactory = deviceProviderFactoryProvider.get(),
                     reportsDir = reportsDirProvider.get(),
-                    applicationId = applicationIdProvider.get(),
+                    applicationId = identifierProvider.get(),
                     adbExecutablePath = adbExecutablePath,
                     providerFactory = providerFactory,
                     isRecordMode = isRecordMode,
